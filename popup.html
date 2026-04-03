@@ -300,7 +300,14 @@
     }
 
     async function loadMacros() {
-      const { macros = [], session, stats = {} } = await chrome.storage.local.get(['macros', 'session', 'stats']);
+      let { macros = [], session, stats = {} } = await chrome.storage.local.get(['macros', 'session', 'stats']);
+
+      // If no macros exist, trigger a reload from background to seed defaults
+      if (!macros || macros.length === 0) {
+        const result = await chrome.runtime.sendMessage({ type: 'GET_MACROS' });
+        macros = result?.macros || [];
+      }
+
       allMacros = macros.filter(m => m.enabled !== false);
 
       const today = new Date().toISOString().slice(0, 10);
@@ -325,7 +332,7 @@
       renderMacros(allMacros);
 
       const syncEl = document.getElementById('sync-status');
-      syncEl.innerHTML = session?.access_token
+      syncEl.innerHTML = session?.idToken
         ? '<span class="sync-badge online"><span class="sync-dot"></span>Synced</span>'
         : '<span class="sync-badge offline"><span class="sync-dot"></span>Local only</span>';
     }

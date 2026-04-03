@@ -933,8 +933,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'GET_MACROS') {
-    chrome.storage.local.get(['macros'], (result) => {
-      sendResponse({ macros: result.macros || [] });
+    chrome.storage.local.get(['macros'], async (result) => {
+      let macros = result.macros || [];
+      // Seed defaults if storage is empty (e.g. reload without fresh install)
+      if (macros.length === 0) {
+        macros = DEFAULT_MACROS;
+        await chrome.storage.local.set({ macros });
+      }
+      sendResponse({ macros });
     });
     return true;
   }
