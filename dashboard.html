@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SnapText Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --blue: #2563EB;
+      --blue-light: #60A5FA;
+      --blue-dark: #1D4ED8;
+      --blue-bg: #EFF6FF;
+      --blue-50: #DBEAFE;
+      --bg: #F8FAFC;
+      --white: #FFFFFF;
+      --border: #E2E8F0;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --text-light: #94A3B8;
+      --danger: #EF4444;
+      --danger-bg: #FEF2F2;
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+      --warn: #F59E0B;
+      --warn-bg: #FFFBEB;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 240px;
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+    }
+
+    .main { flex: 1; margin-left: 240px; padding: 28px 36px; }
+
+    .sidebar-logo {
+      padding: 18px 20px;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: -0.3px;
+    }
+    .sidebar-logo svg { width: 24px; height: 24px; }
+
+    .sidebar-section {
+      padding: 16px 16px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sidebar-section .add-folder-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-light); font-size: 16px; line-height: 1;
+      padding: 0 2px; border-radius: 3px;
+    }
+    .sidebar-section .add-folder-btn:hover { color: var(--blue); }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.12s;
+      border-radius: 6px;
+      margin: 1px 8px;
+      font-weight: 500;
+    }
+    .sidebar-item:hover { background: var(--blue-bg); color: var(--blue); }
+    .sidebar-item.active { background: var(--blue-bg); color: var(--blue); font-weight: 600; }
+
+    .sidebar-item .count {
+      margin-left: auto;
+      font-size: 11px;
+      background: var(--bg);
+      color: var(--text-light);
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .sidebar-item.active .count { background: var(--blue); color: #fff; }
+
+    .sidebar-item .folder-actions {
+      margin-left: auto;
+      display: none;
+      gap: 2px;
+    }
+    .sidebar-item:hover .folder-actions { display: flex; }
+    .sidebar-item:hover .count { display: none; }
+    .folder-action-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 11px; color: var(--text-light); padding: 1px 3px;
+      border-radius: 3px;
+    }
+    .folder-action-btn:hover { color: var(--blue); background: var(--blue-50); }
+    .folder-action-btn.danger:hover { color: var(--danger); background: var(--danger-bg); }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .user-info { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; }
+    .sidebar-footer .btn { width: 100%; margin-bottom: 6px; justify-content: center; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .topbar h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+
+    /* ── Conflict banner ─────────────────────────────── */
+    .conflict-banner {
+      display: none;
+      background: var(--warn-bg);
+      border: 1px solid #FDE68A;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #92400E;
+    }
+    .conflict-banner.visible { display: flex; align-items: center; gap: 12px; }
+    .conflict-banner .cb-icon { font-size: 20px; }
+    .conflict-banner .cb-text { flex: 1; }
+    .conflict-banner .cb-text strong { font-weight: 700; }
+
+    /* ── Stats cards ─────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+    .stat-card .label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-light);
+      margin-bottom: 4px;
+    }
+    .stat-card .value { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -1px; }
+    .stat-card .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Buttons ─────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      background: var(--white);
+      color: var(--text);
+      transition: all 0.12s;
+      font-family: inherit;
+    }
+    .btn:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .btn-primary:hover { background: var(--blue-dark); }
+    .btn-danger { color: var(--danger); border-color: transparent; background: transparent; }
+    .btn-danger:hover { background: var(--danger-bg); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-warn { background: var(--warn); color: #fff; border-color: var(--warn); }
+    .btn-success { background: var(--success); color: #fff; border-color: var(--success); }
+
+    .search-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .search-input {
+      flex: 1; padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 13px;
+      outline: none;
+      background: var(--white);
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--blue); }
+
+    /* ── Macro table ─────────────────────────────────── */
+    .macro-table {
+      width: 100%; border-collapse: collapse;
+      background: var(--white);
+      border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .macro-table th {
+      text-align: left; padding: 10px 16px;
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text-light);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .macro-table td {
+      padding: 12px 16px; font-size: 13px;
+      border-bottom: 1px solid #F1F5F9;
+      vertical-align: middle;
+    }
+    .macro-table tr:last-child td { border-bottom: none; }
+    .macro-table tr:hover td { background: #FAFCFF; }
+    .trigger-cell {
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      color: var(--blue); font-weight: 600; font-size: 12px;
+    }
+    .body-cell {
+      color: var(--text-muted);
+      max-width: 360px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .folder-badge {
+      display: inline-block;
+      background: var(--blue-bg);
+      color: var(--blue);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 4px;
+    }
+    .use-count { font-size: 12px; color: var(--text-light); font-weight: 500; }
+    .actions-cell { display: flex; gap: 4px; }
+
+    .toggle-switch { position: relative; width: 34px; height: 18px; cursor: pointer; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: #CBD5E1; border-radius: 10px;
+      transition: 0.2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute;
+      width: 14px; height: 14px;
+      left: 2px; top: 2px;
+      background: #fff; border-radius: 50%;
+      transition: 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--blue); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+    /* ── Modal ───────────────────────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+
+    .modal {
+      background: var(--white); border-radius: 14px;
+      width: 500px; max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+      animation: modal-in 0.15s ease-out;
+    }
+    @keyframes modal-in {
+      from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-header h3 { font-size: 16px; font-weight: 700; }
+    .modal-close {
+      background: none; border: none;
+      font-size: 18px; cursor: pointer;
+      color: var(--text-muted);
+      width: 30px; height: 30px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-close:hover { background: var(--bg); }
+    .modal-body { padding: 20px 24px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block; font-size: 12px; font-weight: 600;
+      margin-bottom: 5px; color: var(--text);
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px; font-size: 13px;
+      outline: none; font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--blue); }
+    .form-group textarea {
+      min-height: 100px; resize: vertical;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      font-size: 13px;
+    }
+    .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .form-hint code {
+      background: var(--bg); padding: 1px 5px;
+      border-radius: 3px; font-size: 11px;
+      color: var(--blue); border: 1px solid var(--border);
+    }
+    .form-error { font-size: 12px; color: var(--danger); margin-top: 4px; display: none; }
+    .form-error.visible { display: block; }
+
+    .preview-pane {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px; padding: 12px 14px;
+      font-size: 13px; color: var(--text-muted);
+      min-height: 50px;
+      white-space: pre-wrap; word-wrap: break-word; margin-top: 8px;
+    }
+
+    .modal-footer {
+      padding: 14px 24px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 8px;
+    }
+
+    /* ── Share / Explore ────────────────────────────── */
+    .share-tabs {
+      display: flex; gap: 0; margin-bottom: 20px;
+      border-bottom: 2px solid var(--border);
+    }
+    .share-tab {
+      padding: 10px 20px; font-size: 13px; font-weight: 600;
+      cursor: pointer; color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: 0.15s;
+    }
+    .share-tab:hover { color: var(--text); }
+    .share-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    .share-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px;
+      margin-top: 8px;
+    }
+    .share-code-display {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 14px;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      font-size: 16px; font-weight: 600; letter-spacing: 1px;
+      color: var(--blue);
+    }
+    .share-code-display .copy-btn {
+      margin-left: auto; cursor: pointer;
+      background: var(--blue-bg); border: none;
+      padding: 4px 10px; border-radius: 5px;
+      font-size: 12px; color: var(--blue); font-weight: 600;
+    }
+    .share-code-display .copy-btn:hover { background: var(--blue-50); }
+
+    .explore-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .explore-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px;
+      transition: border-color 0.15s;
+    }
+    .explore-card:hover { border-color: var(--blue-light); }
+    .explore-card .ec-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .explore-card .ec-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .explore-card .ec-meta {
+      display: flex; gap: 12px; font-size: 11px; color: var(--text-light);
+      margin-bottom: 12px;
+    }
+    .explore-card .ec-meta span { display: flex; align-items: center; gap: 4px; }
+
+    .share-code {
+      width: 100%; padding: 8px 10px;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--white);
+      word-break: break-all;
+      min-height: 60px; resize: vertical;
+    }
+    .share-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+    .my-shares-table {
+      width: 100%; border-collapse: collapse;
+      background: var(--white);
+      border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .my-shares-table th {
+      text-align: left; padding: 10px 16px;
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text-light);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .my-shares-table td {
+      padding: 10px 16px; font-size: 13px;
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    /* ── Auth ────────────────────────────────────────── */
+    .auth-card {
+      background: var(--white); border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 32px; text-align: center;
+      max-width: 380px; margin: 40px auto;
+    }
+    .auth-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .auth-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+    .auth-input {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px; font-size: 13px;
+      outline: none; margin-bottom: 10px; font-family: inherit;
+    }
+    .auth-input:focus { border-color: var(--blue); }
+
+    /* ── Settings ────────────────────────────────────── */
+    .settings-section {
+      background: var(--white); border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 20px 24px; margin-bottom: 14px;
+    }
+    .settings-section h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+    .setting-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #F1F5F9;
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 13px; font-weight: 500; }
+    .setting-desc { font-size: 11px; color: var(--text-muted); }
+
+    .domain-list {
+      margin-top: 8px;
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .domain-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 3px 8px; border-radius: 5px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .domain-tag .remove {
+      cursor: pointer; color: var(--danger);
+      font-weight: 700; font-size: 14px;
+      margin-left: 2px;
+    }
+    .domain-add-row { display: flex; gap: 6px; margin-top: 8px; }
+    .domain-add-row input { flex: 1; }
+
+    /* ── Export dropdown ─────────────────────────────── */
+    .export-dropdown {
+      position: relative; display: inline-block;
+    }
+    .export-menu {
+      display: none;
+      position: absolute; top: 100%; right: 0;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      min-width: 180px; z-index: 100;
+      padding: 4px;
+      margin-top: 4px;
+    }
+    .export-menu.visible { display: block; }
+    .export-menu-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; font-size: 13px;
+      cursor: pointer; border-radius: 6px;
+      color: var(--text); border: none;
+      background: none; width: 100; text-align: left;
+      font-family: inherit;
+    }
+    .export-menu-item:hover { background: var(--blue-bg); color: var(--blue); }
+    .export-menu-item .emi-icon { font-size: 15px; width: 20px; text-align: center; }
+    .export-menu-item .emi-desc { font-size: 11px; color: var(--text-light); }
+
+    .empty {
+      text-align: center; padding: 60px 20px; color: var(--text-muted);
+    }
+    .empty .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty p { font-size: 14px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <svg viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="5" fill="#2563EB"/><path d="M13.5 5L9 13h4L11 19l5-8h-4l1.5-6z" fill="white"/></svg>
+        SnapText
+      </div>
+      <div class="sidebar-section">Menu</div>
+      <div class="sidebar-item active" data-view="macros">&#128221; All Macros <span class="count" id="count-all">0</span></div>
+      <div class="sidebar-item" data-view="share">&#128279; Share &amp; Explore</div>
+      <div class="sidebar-item" data-view="settings">&#9881; Settings</div>
+      <div class="sidebar-item" data-view="account">&#128100; Account</div>
+      <div class="sidebar-section">Folders <button class="add-folder-btn" id="btn-add-folder" title="New folder">+</button></div>
+      <div id="folder-list"></div>
+      <div class="sidebar-footer">
+        <div class="user-info" id="user-info">Not signed in</div>
+        <div class="export-dropdown">
+          <button class="btn btn-sm" id="btn-export-toggle">&#128228; Export &#9662;</button>
+          <div class="export-menu" id="export-menu">
+            <button class="export-menu-item" id="btn-export-json">
+              <span class="emi-icon">{ }</span>
+              <div><div>JSON</div><div class="emi-desc">Full macro data</div></div>
+            </button>
+            <button class="export-menu-item" id="btn-export-csv">
+              <span class="emi-icon">&#128202;</span>
+              <div><div>CSV</div><div class="emi-desc">Spreadsheet-friendly</div></div>
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-sm" id="btn-import" style="margin-top:6px;">&#128229; Import</button>
+      </div>
+    </nav>
+
+    <div class="main">
+      <!-- MACROS VIEW -->
+      <div id="view-macros">
+        <div class="topbar">
+          <h2 id="view-title">All Macros</h2>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary" id="btn-new-macro">+ New Macro</button>
+          </div>
+        </div>
+
+        <div class="conflict-banner" id="conflict-banner">
+          <span class="cb-icon">&#9888;</span>
+          <div class="cb-text">
+            <strong id="conflict-count">0</strong> macro(s) were changed on another device.
+            Cloud version was kept. Review in the sync history.
+          </div>
+          <button class="btn btn-sm" id="btn-dismiss-conflict">Dismiss</button>
+        </div>
+
+        <div class="stats-row" id="stats-row">
+          <div class="stat-card"><div class="label">Total Macros</div><div class="value" id="stat-total">0</div></div>
+          <div class="stat-card"><div class="label">Expansions Today</div><div class="value" id="stat-today">0</div></div>
+          <div class="stat-card"><div class="label">This Week</div><div class="value" id="stat-week">0</div></div>
+          <div class="stat-card"><div class="label">Characters Saved</div><div class="value" id="stat-chars">0</div><div class="sub">estimated</div></div>
+        </div>
+
+        <div class="search-row">
+          <input type="text" class="search-input" id="dash-search" placeholder="Search by trigger, content, or folder..." />
+        </div>
+        <div id="macro-table-wrap"></div>
+      </div>
+
+      <!-- SHARE & EXPLORE VIEW -->
+      <div id="view-share" style="display:none;">
+        <div class="topbar"><h2>Share &amp; Explore</h2></div>
+
+        <div class="share-tabs">
+          <div class="share-tab active" data-stab="publish">Publish</div>
+          <div class="share-tab" data-stab="import">Import</div>
+          <div class="share-tab" data-stab="explore">Explore</div>
+          <div class="share-tab" data-stab="my-shares">My Shares</div>
+        </div>
+
+        <!-- Publish tab -->
+        <div id="stab-publish">
+          <div class="settings-section">
+            <h3>Share macros with other users</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+              Publish a folder as a shareable pack. You'll get a short code that anyone can use to import your macros.
+            </p>
+            <div class="form-group">
+              <label>Folder to share</label>
+              <select id="share-folder-select"></select>
+            </div>
+            <div class="form-group">
+              <label>Pack title</label>
+              <input type="text" id="share-title" placeholder="e.g. Customer Support Templates" />
+            </div>
+            <div class="form-group">
+              <label>Description (optional)</label>
+              <input type="text" id="share-desc" placeholder="A brief description of what's included" />
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+              <label class="toggle-switch">
+                <input type="checkbox" id="share-public" />
+                <span class="toggle-slider"></span>
+              </label>
+              <div>
+                <div style="font-size:13px;font-weight:500;">List publicly</div>
+                <div style="font-size:11px;color:var(--text-muted);">Others can discover this in the Explore tab</div>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="btn-publish-cloud">Publish to Cloud</button>
+            <div id="publish-result" style="display:none;margin-top:14px;"></div>
+
+            <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:16px;">
+              <p style="font-size:12px;color:var(--text-light);margin-bottom:8px;">Or generate a legacy offline share code:</p>
+              <button class="btn btn-sm" id="btn-generate-legacy">Generate Base64 Code</button>
+              <div id="legacy-share-box" style="display:none;margin-top:8px;">
+                <textarea class="share-code" id="legacy-share-code" readonly></textarea>
+                <div class="share-actions">
+                  <button class="btn btn-sm" id="btn-copy-legacy">Copy to Clipboard</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Import tab -->
+        <div id="stab-import" style="display:none;">
+          <div class="settings-section">
+            <h3>Import from a share code</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+              Enter an 8-character cloud share code, or paste a legacy Base64 code.
+            </p>
+            <div class="form-group">
+              <label>Share code</label>
+              <input type="text" id="cloud-import-code" placeholder="e.g. AbC3dEfG" style="font-family:monospace;font-size:16px;letter-spacing:1px;text-align:center;" />
+            </div>
+            <button class="btn btn-primary" id="btn-import-cloud">Import</button>
+            <div id="import-result" style="display:none;margin-top:14px;"></div>
+
+            <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:16px;">
+              <p style="font-size:12px;color:var(--text-light);margin-bottom:8px;">Or paste a legacy Base64 share code:</p>
+              <div class="form-group">
+                <textarea class="share-code" id="legacy-import-code" placeholder="Paste legacy Base64 code here..."></textarea>
+              </div>
+              <button class="btn btn-sm" id="btn-import-legacy">Import Legacy Code</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explore tab -->
+        <div id="stab-explore" style="display:none;">
+          <div class="search-row">
+            <input type="text" class="search-input" id="explore-search" placeholder="Search public snippet packs..." />
+            <button class="btn btn-primary" id="btn-explore-search">Search</button>
+          </div>
+          <div id="explore-grid" class="explore-grid"></div>
+          <div id="explore-empty" class="empty" style="display:none;">
+            <div class="icon">&#127758;</div>
+            <p>No public snippet packs found. Be the first to share!</p>
+          </div>
+        </div>
+
+        <!-- My Shares tab -->
+        <div id="stab-my-shares" style="display:none;">
+          <div id="my-shares-wrap"></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div id="view-settings" style="display:none;">
+        <div class="topbar"><h2>Settings</h2></div>
+
+        <div class="settings-section">
+          <h3>Expansion</h3>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Trigger character</div>
+              <div class="setting-desc">Character prefix for macros (default: ;)</div>
+            </div>
+            <input type="text" id="set-trigger" style="width:50px;text-align:center;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-weight:600;" value=";" />
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Blocked Sites</h3>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+            SnapText won't expand macros or show the search overlay on these domains.
+          </p>
+          <div class="domain-list" id="domain-list"></div>
+          <div class="domain-add-row">
+            <input type="text" id="domain-input" placeholder="e.g. bank.com" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;" />
+            <button class="btn btn-sm btn-primary" id="btn-add-domain">Add</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Sync</h3>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Cloud sync</div>
+              <div class="setting-desc">Back up and sync macros across devices (requires account — see Account page)</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="set-sync" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Cloud Backend</h3>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+            SnapText uses Firebase for cloud sync and sharing. Sign in on the Account page to enable.
+          </p>
+          <button class="btn btn-primary" id="btn-save-settings">Save Settings</button>
+        </div>
+      </div>
+
+      <!-- ACCOUNT VIEW -->
+      <div id="view-account" style="display:none;">
+        <div class="topbar"><h2>Account</h2></div>
+        <div id="auth-logged-out">
+          <div class="auth-card">
+            <h3>Sign in to back up & sync</h3>
+            <p style="margin-bottom:12px;">Your macros are stored locally and work without an account. To <strong>back up your macros to the cloud</strong> and <strong>sync them across devices</strong>, create a free account or sign in below.</p>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Without an account, your macros only exist in this browser. If you uninstall the extension or clear browser data, they will be lost.</p>
+            <input type="email" class="auth-input" id="auth-email" placeholder="Email address" />
+            <input type="password" class="auth-input" id="auth-password" placeholder="Password" />
+            <button class="btn btn-primary" style="width:100%;margin-bottom:8px;justify-content:center;" id="btn-signin">Sign In</button>
+            <button class="btn" style="width:100%;justify-content:center;" id="btn-signup">Create Account</button>
+          </div>
+        </div>
+        <div id="auth-logged-in" style="display:none;">
+          <div class="auth-card">
+            <h3>&#10003; Signed in</h3>
+            <p id="auth-user-email"></p>
+            <button class="btn" id="btn-sync-now" style="width:100%;margin-bottom:8px;justify-content:center;">&#128260; Sync Now</button>
+            <button class="btn btn-danger" style="width:100%;justify-content:center;" id="btn-signout">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Macro editor modal -->
+  <div class="modal-overlay" id="modal-macro">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">New Macro</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Trigger</label>
+          <input type="text" id="macro-trigger" placeholder="e.g. sig, addr, reply" />
+          <div class="form-hint">Type <code>;</code><em>trigger</em> then Space to expand</div>
+          <div class="form-error" id="trigger-error">A macro with this trigger already exists.</div>
+        </div>
+        <div class="form-group">
+          <label>Expansion body</label>
+          <textarea id="macro-body" placeholder="The text that will be inserted..."></textarea>
+          <div class="form-hint">
+            Variables: <code>{{date}}</code> <code>{{time}}</code> <code>{{clipboard}}</code> <code>{{cursor}}</code> <code>{{input:Label}}</code> <code>{{macro:trigger}}</code>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Preview</label>
+          <div class="preview-pane" id="macro-preview">Type in the body above to see a preview...</div>
+        </div>
+        <div class="form-group">
+          <label>Folder</label>
+          <input type="text" id="macro-folder" placeholder="e.g. Email, Work, Personal" list="folder-datalist" />
+          <datalist id="folder-datalist"></datalist>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="modal-cancel">Cancel</button>
+        <button class="btn btn-danger" id="modal-delete" style="display:none;">Delete</button>
+        <button class="btn btn-primary" id="modal-save">Save Macro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Folder create/rename modal -->
+  <div class="modal-overlay" id="modal-folder">
+    <div class="modal" style="width:380px;">
+      <div class="modal-header">
+        <h3 id="folder-modal-title">New Folder</h3>
+        <button class="modal-close" id="folder-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Folder name</label>
+          <input type="text" id="folder-name-input" placeholder="e.g. Sales, Support, Personal" />
+          <div class="form-error" id="folder-error">This folder already exists.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="folder-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="folder-modal-save">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="file-import" accept=".json,.csv" style="display:none;" />
+
+  <script>
+    let macros = [];
+    let currentFolder = null;
+    let editingMacroId = null;
+    let renamingFolder = null;
+
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+
+    // ── Init ────────────────────────────────────────────────────────────
+    async function init() {
+      const data = await chrome.storage.local.get(['macros', 'session', 'settings', 'stats', 'charsSaved', 'conflicts', 'folders']);
+      macros = data.macros || [];
+      renderAll();
+      renderStats(data.stats || {}, data.charsSaved || 0);
+      checkAuth(data.session);
+      loadSettings(data.settings);
+      showConflicts(data.conflicts || []);
+      populateShareFolders();
+      updateFolderDatalist();
+
+      if (new URLSearchParams(location.search).get('add') === 'true') openMacroModal();
+    }
+
+    function showConflicts(conflicts) {
+      if (conflicts.length > 0) {
+        $('#conflict-banner').classList.add('visible');
+        $('#conflict-count').textContent = conflicts.length;
+      } else {
+        $('#conflict-banner').classList.remove('visible');
+      }
+    }
+
+    // ── Stats ───────────────────────────────────────────────────────────
+    function renderStats(stats, charsSaved) {
+      const today = new Date().toISOString().slice(0, 10);
+      let weekCount = 0;
+      const now = new Date();
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(now); d.setDate(d.getDate() - i);
+        weekCount += (stats[d.toISOString().slice(0, 10)] || 0);
+      }
+      $('#stat-total').textContent = macros.length;
+      $('#stat-today').textContent = stats[today] || 0;
+      $('#stat-week').textContent = weekCount;
+      $('#stat-chars').textContent = charsSaved >= 1000 ? `${(charsSaved / 1000).toFixed(1)}k` : charsSaved;
+    }
+
+    // ── Render ──────────────────────────────────────────────────────────
+    function renderAll() { renderFolders(); renderMacroTable(); }
+
+    function getAllFolders() {
+      const fromMacros = macros.map(m => m.folder || 'General');
+      // Merge with explicit folders
+      return [...new Set(fromMacros)].sort();
+    }
+
+    function renderFolders() {
+      const folders = getAllFolders();
+      const fl = $('#folder-list');
+      fl.innerHTML = folders.map(f => {
+        const count = macros.filter(m => (m.folder || 'General') === f).length;
+        const active = currentFolder === f ? 'active' : '';
+        return `<div class="sidebar-item ${active}" data-folder="${esc(f)}">
+          &#128193; ${esc(f)} <span class="count">${count}</span>
+          <span class="folder-actions">
+            <button class="folder-action-btn" data-rename="${esc(f)}" title="Rename">&#9998;</button>
+            ${f !== 'General' ? `<button class="folder-action-btn danger" data-delfolder="${esc(f)}" title="Delete">&#128465;</button>` : ''}
+          </span>
+        </div>`;
+      }).join('');
+
+      fl.querySelectorAll('.sidebar-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.folder-action-btn')) return;
+          currentFolder = el.dataset.folder;
+          $$('.sidebar-item').forEach(i => i.classList.remove('active'));
+          el.classList.add('active');
+          $('#view-title').textContent = currentFolder;
+          showView('macros');
+          renderMacroTable();
+        });
+      });
+
+      fl.querySelectorAll('[data-rename]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openFolderModal(el.dataset.rename);
+        });
+      });
+
+      fl.querySelectorAll('[data-delfolder]').forEach(el => {
+        el.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const name = el.dataset.delfolder;
+          if (!confirm(`Delete folder "${name}"? Macros will be moved to General.`)) return;
+          const result = await chrome.runtime.sendMessage({ type: 'DELETE_FOLDER', name });
+          if (result.success) {
+            macros = result.macros;
+            currentFolder = null;
+            $('#view-title').textContent = 'All Macros';
+            renderAll();
+          }
+        });
+      });
+
+      $('#count-all').textContent = macros.length;
+    }
+
+    function updateFolderDatalist() {
+      const dl = $('#folder-datalist');
+      if (!dl) return;
+      const folders = getAllFolders();
+      dl.innerHTML = folders.map(f => `<option value="${esc(f)}">`).join('');
+    }
+
+    function renderMacroTable() {
+      const q = ($('#dash-search')?.value || '').toLowerCase();
+      let filtered = macros;
+      if (currentFolder) filtered = filtered.filter(m => (m.folder || 'General') === currentFolder);
+      if (q) filtered = filtered.filter(m =>
+        m.trigger.toLowerCase().includes(q) || m.body.toLowerCase().includes(q) || (m.folder || '').toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        $('#macro-table-wrap').innerHTML = `<div class="empty"><div class="icon">&#9889;</div><p>No macros found.</p><button class="btn btn-primary" onclick="openMacroModal()">+ New Macro</button></div>`;
+        return;
+      }
+
+      filtered.sort((a, b) => (b.useCount || 0) - (a.useCount || 0));
+
+      $('#macro-table-wrap').innerHTML = `
+        <table class="macro-table">
+          <thead><tr><th>Trigger</th><th>Body</th><th>Folder</th><th>Used</th><th>On</th><th>Actions</th></tr></thead>
+          <tbody>${filtered.map(m => `
+            <tr>
+              <td class="trigger-cell">;${esc(m.trigger)}</td>
+              <td class="body-cell" title="${esc(m.body)}">${esc(m.body)}</td>
+              <td><span class="folder-badge">${esc(m.folder || 'General')}</span></td>
+              <td><span class="use-count">${m.useCount || 0}x</span></td>
+              <td><label class="toggle-switch"><input type="checkbox" ${m.enabled !== false ? 'checked' : ''} data-toggle="${m.id}" /><span class="toggle-slider"></span></label></td>
+              <td><div class="actions-cell"><button class="btn btn-sm" data-edit="${m.id}">Edit</button></div></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+
+      $$('[data-toggle]').forEach(el => {
+        el.addEventListener('change', () => {
+          const macro = macros.find(m => m.id === el.dataset.toggle);
+          if (macro) { macro.enabled = el.checked; saveMacros(); }
+        });
+      });
+      $$('[data-edit]').forEach(el => {
+        el.addEventListener('click', () => openMacroModal(el.dataset.edit));
+      });
+    }
+
+    function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+
+    // ── Folder CRUD ────────────────────────────────────────────────────
+    function openFolderModal(renameFrom) {
+      renamingFolder = renameFrom || null;
+      $('#folder-error').classList.remove('visible');
+      if (renameFrom) {
+        $('#folder-modal-title').textContent = 'Rename Folder';
+        $('#folder-name-input').value = renameFrom;
+        $('#folder-modal-save').textContent = 'Rename';
+      } else {
+        $('#folder-modal-title').textContent = 'New Folder';
+        $('#folder-name-input').value = '';
+        $('#folder-modal-save').textContent = 'Create';
+      }
+      $('#modal-folder').classList.add('visible');
+      setTimeout(() => $('#folder-name-input').focus(), 100);
+    }
+
+    function closeFolderModal() { $('#modal-folder').classList.remove('visible'); renamingFolder = null; }
+
+    async function saveFolderAction() {
+      const name = $('#folder-name-input').value.trim();
+      if (!name) return;
+
+      if (renamingFolder) {
+        if (name === renamingFolder) return closeFolderModal();
+        const result = await chrome.runtime.sendMessage({ type: 'RENAME_FOLDER', oldName: renamingFolder, newName: name });
+        if (result.success) {
+          macros = result.macros;
+          if (currentFolder === renamingFolder) currentFolder = name;
+          renderAll(); populateShareFolders(); updateFolderDatalist();
+        }
+      } else {
+        const result = await chrome.runtime.sendMessage({ type: 'CREATE_FOLDER', name });
+        if (!result.success) {
+          $('#folder-error').textContent = result.error;
+          $('#folder-error').classList.add('visible');
+          return;
+        }
+        // Add empty folder — render it by adding explicit folder tracking
+        renderAll(); updateFolderDatalist();
+      }
+      closeFolderModal();
+    }
+
+    // ── Macro CRUD ──────────────────────────────────────────────────────
+    function openMacroModal(id) {
+      editingMacroId = id || null;
+      $('#trigger-error').classList.remove('visible');
+      if (id) {
+        const m = macros.find(x => x.id === id); if (!m) return;
+        $('#modal-title').textContent = 'Edit Macro';
+        $('#macro-trigger').value = m.trigger;
+        $('#macro-body').value = m.body;
+        $('#macro-folder').value = m.folder || '';
+        $('#modal-delete').style.display = 'inline-flex';
+        updatePreview();
+      } else {
+        $('#modal-title').textContent = 'New Macro';
+        $('#macro-trigger').value = '';
+        $('#macro-body').value = '';
+        $('#macro-folder').value = currentFolder || '';
+        $('#modal-delete').style.display = 'none';
+        $('#macro-preview').textContent = 'Type in the body above to see a preview...';
+      }
+      $('#modal-macro').classList.add('visible');
+      setTimeout(() => $('#macro-trigger').focus(), 100);
+    }
+    window.openMacroModal = openMacroModal;
+
+    function closeMacroModal() { $('#modal-macro').classList.remove('visible'); editingMacroId = null; }
+
+    function updatePreview() {
+      const body = $('#macro-body').value;
+      if (!body) { $('#macro-preview').textContent = 'Type in the body above to see a preview...'; return; }
+      let preview = body
+        .replace(/\{\{date\}\}/gi, new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))
+        .replace(/\{\{time\}\}/gi, new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }))
+        .replace(/\{\{clipboard\}\}/gi, '[clipboard]')
+        .replace(/\{\{cursor\}\}/gi, '|')
+        .replace(/\{\{input:([^}]+)\}\}/gi, '[$1]')
+        .replace(/\{\{macro:([^}]+)\}\}/gi, (_, name) => {
+          const ref = macros.find(m => m.trigger.toLowerCase() === name.toLowerCase());
+          return ref ? `[${ref.body.substring(0, 30)}...]` : `[macro:${name}]`;
+        });
+      $('#macro-preview').textContent = preview;
+    }
+
+    function checkDuplicate() {
+      const trigger = $('#macro-trigger').value.trim().replace(/^;/, '').toLowerCase();
+      const existing = macros.find(m => m.trigger.toLowerCase() === trigger && m.id !== editingMacroId);
+      if (existing) { $('#trigger-error').classList.add('visible'); return true; }
+      $('#trigger-error').classList.remove('visible');
+      return false;
+    }
+
+    function saveMacro() {
+      const trigger = $('#macro-trigger').value.trim().replace(/^;/, '');
+      const body = $('#macro-body').value;
+      const folder = $('#macro-folder').value.trim() || 'General';
+      if (!trigger || !body) return alert('Trigger and body are required.');
+      if (checkDuplicate()) return alert('A macro with this trigger already exists.');
+
+      if (editingMacroId) {
+        const m = macros.find(x => x.id === editingMacroId);
+        if (m) { m.trigger = trigger; m.body = body; m.folder = folder; m.updatedAt = Date.now(); }
+      } else {
+        macros.push({
+          id: 'macro-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          trigger, body, folder, enabled: true, useCount: 0,
+          createdAt: Date.now(), updatedAt: Date.now()
+        });
+      }
+      saveMacros(); closeMacroModal(); renderAll(); populateShareFolders(); updateFolderDatalist();
+    }
+
+    function deleteMacro() {
+      if (!editingMacroId || !confirm('Delete this macro?')) return;
+      macros = macros.filter(m => m.id !== editingMacroId);
+      saveMacros(); closeMacroModal(); renderAll();
+    }
+
+    async function saveMacros() { await chrome.storage.local.set({ macros }); }
+
+    // ── Export ──────────────────────────────────────────────────────────
+    function exportJSON() {
+      const toExport = currentFolder ? macros.filter(m => (m.folder || 'General') === currentFolder) : macros;
+      const blob = new Blob([JSON.stringify(toExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const suffix = currentFolder ? `-${currentFolder.toLowerCase().replace(/\s+/g, '-')}` : '';
+      a.href = url; a.download = `snaptext-macros${suffix}-${new Date().toISOString().slice(0,10)}.json`;
+      a.click(); URL.revokeObjectURL(url);
+    }
+
+    function exportCSV() {
+      const toExport = currentFolder ? macros.filter(m => (m.folder || 'General') === currentFolder) : macros;
+      const header = 'trigger,body,folder,enabled,useCount';
+      const rows = toExport.map(m => {
+        const body = '"' + (m.body || '').replace(/"/g, '""') + '"';
+        const folder = '"' + (m.folder || 'General').replace(/"/g, '""') + '"';
+        return `"${m.trigger}",${body},${folder},${m.enabled !== false},${m.useCount || 0}`;
+      });
+      const csv = header + '\n' + rows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const suffix = currentFolder ? `-${currentFolder.toLowerCase().replace(/\s+/g, '-')}` : '';
+      a.href = url; a.download = `snaptext-macros${suffix}-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+    }
+
+    function importFile(file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target.result;
+        if (file.name.endsWith('.csv')) {
+          const result = await chrome.runtime.sendMessage({ type: 'IMPORT_CSV', csv: text });
+          if (result.success) {
+            const { macros: updated } = await chrome.storage.local.get(['macros']);
+            macros = updated || [];
+            renderAll(); alert(`Imported ${result.count} macros from CSV!`);
+          } else {
+            alert(result.error || 'Invalid CSV file.');
+          }
+        } else {
+          try {
+            const imported = JSON.parse(text);
+            if (!Array.isArray(imported)) throw new Error();
+            macros = [...macros, ...imported.map(m => ({
+              ...m, id: m.id || 'macro-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)
+            }))];
+            await saveMacros(); renderAll(); alert(`Imported ${imported.length} macros!`);
+          } catch { alert('Invalid JSON file.'); }
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ── Cloud sharing ──────────────────────────────────────────────────
+    function populateShareFolders() {
+      const folders = getAllFolders();
+      const sel = $('#share-folder-select');
+      if (!sel) return;
+      sel.innerHTML = '<option value="__all__">All Macros</option>' +
+        folders.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+    }
+
+    async function publishToCloud() {
+      const folder = $('#share-folder-select').value;
+      const title = $('#share-title').value.trim();
+      if (!title) return alert('Give your snippet pack a title.');
+
+      const toShare = folder === '__all__' ? macros : macros.filter(m => (m.folder || 'General') === folder);
+      if (toShare.length === 0) return alert('No macros to share.');
+
+      const description = $('#share-desc').value.trim();
+      const isPublic = $('#share-public').checked;
+
+      const result = await chrome.runtime.sendMessage({
+        type: 'PUBLISH_TO_CLOUD', title, description, macros: toShare, isPublic
+      });
+
+      const box = $('#publish-result');
+      if (result.success) {
+        box.innerHTML = `
+          <div style="background:var(--success-bg);border:1px solid #A7F3D0;border-radius:8px;padding:14px;">
+            <div style="font-size:13px;font-weight:600;color:#065F46;margin-bottom:8px;">Published!</div>
+            <div class="share-code-display">
+              ${result.shareCode}
+              <button class="copy-btn" onclick="navigator.clipboard.writeText('${result.shareCode}');this.textContent='Copied!';">Copy</button>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">
+              Share this code with anyone. They can import in SnapText's Import tab.
+            </div>
+          </div>`;
+      } else {
+        box.innerHTML = `<div style="color:var(--danger);font-size:13px;">${result.error || 'Failed to publish. Are you signed in?'}</div>`;
+      }
+      box.style.display = 'block';
+    }
+
+    async function importFromCloud() {
+      const code = $('#cloud-import-code').value.trim();
+      if (!code) return alert('Enter a share code.');
+
+      // Try cloud code first (8 chars), fall back to Base64
+      let result;
+      if (code.length <= 12 && !code.includes('=') && !code.includes('/')) {
+        result = await chrome.runtime.sendMessage({ type: 'IMPORT_FROM_CLOUD', shareCode: code });
+      }
+
+      if (!result || !result.success) {
+        // Try as legacy base64
+        result = await chrome.runtime.sendMessage({ type: 'IMPORT_SHARE_CODE', code });
+      }
+
+      const box = $('#import-result');
+      if (result.success) {
+        const { macros: updated } = await chrome.storage.local.get(['macros']);
+        macros = updated || [];
+        renderAll(); populateShareFolders();
+        const authorPart = result.author ? ` by ${result.author}` : '';
+        const titlePart = result.title ? `"${result.title}"${authorPart} — ` : '';
+        box.innerHTML = `<div style="background:var(--success-bg);border:1px solid #A7F3D0;border-radius:8px;padding:12px;font-size:13px;color:#065F46;">
+          Imported ${titlePart}${result.count} macro(s)!</div>`;
+        $('#cloud-import-code').value = '';
+      } else {
+        box.innerHTML = `<div style="color:var(--danger);font-size:13px;">${result.error || 'Invalid share code.'}</div>`;
+      }
+      box.style.display = 'block';
+    }
+
+    async function loadExplore(query) {
+      const results = await chrome.runtime.sendMessage({ type: 'BROWSE_PUBLIC', query: query || '' });
+      const grid = $('#explore-grid');
+      const empty = $('#explore-empty');
+
+      if (!results || results.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      grid.innerHTML = results.map(s => `
+        <div class="explore-card">
+          <div class="ec-title">${esc(s.title)}</div>
+          <div class="ec-desc">${esc(s.description || 'No description')}</div>
+          <div class="ec-meta">
+            <span>&#128100; ${esc(s.author_name || 'Anonymous')}</span>
+            <span>&#128230; ${(s.macros || []).length} macros</span>
+            <span>&#11015; ${s.download_count || 0} imports</span>
+          </div>
+          <button class="btn btn-sm btn-primary" data-import-cloud="${esc(s.share_code)}">Import</button>
+          <span style="font-size:11px;color:var(--text-light);margin-left:8px;">Code: ${esc(s.share_code)}</span>
+        </div>`).join('');
+
+      grid.querySelectorAll('[data-import-cloud]').forEach(el => {
+        el.addEventListener('click', async () => {
+          const code = el.dataset.importCloud;
+          const result = await chrome.runtime.sendMessage({ type: 'IMPORT_FROM_CLOUD', shareCode: code });
+          if (result.success) {
+            const { macros: updated } = await chrome.storage.local.get(['macros']);
+            macros = updated || [];
+            renderAll();
+            el.textContent = `Imported ${result.count}!`;
+            el.disabled = true;
+          } else {
+            alert(result.error || 'Import failed.');
+          }
+        });
+      });
+    }
+
+    async function loadMyShares() {
+      const shares = await chrome.runtime.sendMessage({ type: 'GET_MY_SHARES' });
+      const wrap = $('#my-shares-wrap');
+
+      if (!shares || shares.length === 0) {
+        wrap.innerHTML = '<div class="empty"><div class="icon">&#128279;</div><p>You haven\'t shared any snippet packs yet.</p></div>';
+        return;
+      }
+
+      wrap.innerHTML = `
+        <table class="my-shares-table">
+          <thead><tr><th>Title</th><th>Code</th><th>Macros</th><th>Downloads</th><th>Public</th><th></th></tr></thead>
+          <tbody>${shares.map(s => `
+            <tr>
+              <td style="font-weight:600;">${esc(s.title)}</td>
+              <td style="font-family:monospace;color:var(--blue);font-weight:600;">${esc(s.share_code)}</td>
+              <td>${(s.macros || []).length}</td>
+              <td>${s.download_count || 0}</td>
+              <td>${s.is_public ? '<span style="color:var(--success);">Yes</span>' : 'No'}</td>
+              <td><button class="btn btn-sm btn-danger" data-delete-share="${s.id}">Delete</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+
+      wrap.querySelectorAll('[data-delete-share]').forEach(el => {
+        el.addEventListener('click', async () => {
+          if (!confirm('Delete this shared pack?')) return;
+          await chrome.runtime.sendMessage({ type: 'DELETE_SHARE', shareId: el.dataset.deleteShare });
+          loadMyShares();
+        });
+      });
+    }
+
+    // Legacy share code functions
+    async function generateLegacyCode() {
+      const folder = $('#share-folder-select').value;
+      const toShare = folder === '__all__' ? macros : macros.filter(m => (m.folder || 'General') === folder);
+      if (toShare.length === 0) return alert('No macros in this folder.');
+      const result = await chrome.runtime.sendMessage({ type: 'GENERATE_SHARE_CODE', macros: toShare });
+      $('#legacy-share-code').value = result.code;
+      $('#legacy-share-box').style.display = 'block';
+    }
+
+    async function importLegacyCode() {
+      const code = $('#legacy-import-code').value.trim();
+      if (!code) return alert('Paste a share code first.');
+      const result = await chrome.runtime.sendMessage({ type: 'IMPORT_SHARE_CODE', code });
+      if (result.success) {
+        const { macros: updated } = await chrome.storage.local.get(['macros']);
+        macros = updated || [];
+        renderAll(); populateShareFolders();
+        alert(`Imported ${result.count} macros!`);
+        $('#legacy-import-code').value = '';
+      } else {
+        alert(result.error || 'Invalid share code.');
+      }
+    }
+
+    // ── Auth ────────────────────────────────────────────────────────────
+    function checkAuth(session) {
+      if (session?.idToken && session?.email) {
+        $('#auth-logged-out').style.display = 'none';
+        $('#auth-logged-in').style.display = 'block';
+        $('#auth-user-email').textContent = session.email;
+        $('#user-info').textContent = session.email;
+      } else {
+        $('#auth-logged-out').style.display = 'block';
+        $('#auth-logged-in').style.display = 'none';
+        $('#user-info').textContent = 'Not signed in';
+      }
+    }
+
+    async function signIn() {
+      const email = $('#auth-email').value.trim(), password = $('#auth-password').value;
+      if (!email || !password) return alert('Email and password required.');
+      const result = await chrome.runtime.sendMessage({ type: 'FIREBASE_SIGN_IN', email, password });
+      if (result.success) {
+        const { session } = await chrome.storage.local.get(['session']);
+        checkAuth(session);
+      } else {
+        alert(result.error || 'Sign in failed.');
+      }
+    }
+
+    async function signUp() {
+      const email = $('#auth-email').value.trim(), password = $('#auth-password').value;
+      if (!email || !password) return alert('Email and password required.');
+      if (password.length < 6) return alert('Password must be at least 6 characters.');
+      const result = await chrome.runtime.sendMessage({ type: 'FIREBASE_SIGN_UP', email, password });
+      if (result.success) {
+        const { session } = await chrome.storage.local.get(['session']);
+        checkAuth(session);
+        alert('Account created and signed in!');
+      } else {
+        alert(result.error || 'Sign up failed.');
+      }
+    }
+
+    async function signOut() {
+      await chrome.runtime.sendMessage({ type: 'FIREBASE_SIGN_OUT' });
+      checkAuth(null);
+    }
+
+    async function syncNow() {
+      const result = await chrome.runtime.sendMessage({ type: 'SYNC_FULL' });
+      const { macros: synced, conflicts } = await chrome.storage.local.get(['macros', 'conflicts']);
+      macros = synced || [];
+      renderAll();
+      showConflicts(conflicts || []);
+      if (result.conflicts > 0) {
+        alert(`Synced! ${result.conflicts} conflict(s) detected — cloud version was kept.`);
+      } else {
+        alert('Synced!');
+      }
+    }
+
+    // ── Settings ────────────────────────────────────────────────────────
+    function loadSettings(settings) {
+      if (!settings) return;
+      $('#set-trigger').value = settings.triggerChar || ';';
+      $('#set-sync').checked = settings.syncEnabled || false;
+      renderBlockedDomains(settings.blockedDomains || []);
+    }
+
+    function renderBlockedDomains(domains) {
+      const list = $('#domain-list');
+      list.innerHTML = domains.map(d =>
+        `<span class="domain-tag">${esc(d)} <span class="remove" data-domain="${esc(d)}">&times;</span></span>`
+      ).join('');
+
+      list.querySelectorAll('.remove').forEach(el => {
+        el.addEventListener('click', async () => {
+          const { settings } = await chrome.storage.local.get(['settings']);
+          settings.blockedDomains = (settings.blockedDomains || []).filter(d => d !== el.dataset.domain);
+          await chrome.storage.local.set({ settings });
+          renderBlockedDomains(settings.blockedDomains);
+        });
+      });
+    }
+
+    async function addBlockedDomain() {
+      const domain = $('#domain-input').value.trim().toLowerCase();
+      if (!domain) return;
+      const { settings } = await chrome.storage.local.get(['settings']);
+      if (!settings.blockedDomains) settings.blockedDomains = [];
+      if (!settings.blockedDomains.includes(domain)) {
+        settings.blockedDomains.push(domain);
+        await chrome.storage.local.set({ settings });
+      }
+      renderBlockedDomains(settings.blockedDomains);
+      $('#domain-input').value = '';
+    }
+
+    async function saveSettings() {
+      const { settings: existing } = await chrome.storage.local.get(['settings']);
+      const settings = {
+        ...existing,
+        triggerChar: $('#set-trigger').value || ';',
+        syncEnabled: $('#set-sync').checked
+      };
+      await chrome.storage.local.set({ settings });
+      alert('Settings saved!');
+    }
+
+    // ── View switching ──────────────────────────────────────────────────
+    function showView(view) {
+      ['macros', 'share', 'settings', 'account'].forEach(v => {
+        const el = $(`#view-${v}`);
+        if (el) el.style.display = v === view ? 'block' : 'none';
+      });
+      if (view !== 'macros') $('#stats-row').style.display = 'none';
+      else $('#stats-row').style.display = '';
+    }
+
+    function showShareTab(tab) {
+      ['publish', 'import', 'explore', 'my-shares'].forEach(t => {
+        const el = $(`#stab-${t}`);
+        if (el) el.style.display = t === tab ? 'block' : 'none';
+      });
+      $$('.share-tab').forEach(t => t.classList.toggle('active', t.dataset.stab === tab));
+      if (tab === 'explore') loadExplore();
+      if (tab === 'my-shares') loadMyShares();
+    }
+
+    // ── Event bindings ──────────────────────────────────────────────────
+    $$('.sidebar-item[data-view]').forEach(el => {
+      el.addEventListener('click', () => {
+        currentFolder = null;
+        $$('.sidebar-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        showView(el.dataset.view);
+        if (el.dataset.view === 'macros') { $('#view-title').textContent = 'All Macros'; renderMacroTable(); }
+        if (el.dataset.view === 'share') populateShareFolders();
+      });
+    });
+
+    // Share tabs
+    $$('.share-tab').forEach(el => {
+      el.addEventListener('click', () => showShareTab(el.dataset.stab));
+    });
+
+    // Macro modal
+    $('#btn-new-macro').addEventListener('click', () => openMacroModal());
+    $('#modal-close').addEventListener('click', closeMacroModal);
+    $('#modal-cancel').addEventListener('click', closeMacroModal);
+    $('#modal-save').addEventListener('click', saveMacro);
+    $('#modal-delete').addEventListener('click', deleteMacro);
+    $('#dash-search').addEventListener('input', renderMacroTable);
+    $('#macro-body').addEventListener('input', updatePreview);
+    $('#macro-trigger').addEventListener('input', checkDuplicate);
+
+    // Folder modal
+    $('#btn-add-folder').addEventListener('click', () => openFolderModal());
+    $('#folder-modal-close').addEventListener('click', closeFolderModal);
+    $('#folder-modal-cancel').addEventListener('click', closeFolderModal);
+    $('#folder-modal-save').addEventListener('click', saveFolderAction);
+    $('#folder-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveFolderAction(); });
+
+    // Export dropdown
+    $('#btn-export-toggle').addEventListener('click', () => {
+      $('#export-menu').classList.toggle('visible');
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.export-dropdown')) $('#export-menu').classList.remove('visible');
+    });
+    $('#btn-export-json').addEventListener('click', () => { exportJSON(); $('#export-menu').classList.remove('visible'); });
+    $('#btn-export-csv').addEventListener('click', () => { exportCSV(); $('#export-menu').classList.remove('visible'); });
+
+    // Import
+    $('#btn-import').addEventListener('click', () => $('#file-import').click());
+    $('#file-import').addEventListener('change', (e) => { if (e.target.files[0]) importFile(e.target.files[0]); e.target.value = ''; });
+
+    // Cloud sharing
+    $('#btn-publish-cloud').addEventListener('click', publishToCloud);
+    $('#btn-import-cloud').addEventListener('click', importFromCloud);
+    $('#btn-explore-search').addEventListener('click', () => loadExplore($('#explore-search').value));
+    $('#explore-search').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadExplore($('#explore-search').value); });
+
+    // Legacy sharing
+    $('#btn-generate-legacy').addEventListener('click', generateLegacyCode);
+    $('#btn-copy-legacy').addEventListener('click', () => {
+      navigator.clipboard.writeText($('#legacy-share-code').value);
+      $('#btn-copy-legacy').textContent = 'Copied!';
+      setTimeout(() => $('#btn-copy-legacy').textContent = 'Copy to Clipboard', 2000);
+    });
+    $('#btn-import-legacy').addEventListener('click', importLegacyCode);
+
+    // Auth
+    $('#btn-signin').addEventListener('click', signIn);
+    $('#btn-signup').addEventListener('click', signUp);
+    $('#btn-signout').addEventListener('click', signOut);
+    $('#btn-sync-now').addEventListener('click', syncNow);
+    $('#btn-save-settings').addEventListener('click', saveSettings);
+
+    // Blocked domains
+    $('#btn-add-domain').addEventListener('click', addBlockedDomain);
+    $('#domain-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') addBlockedDomain(); });
+
+    // Conflict banner
+    $('#btn-dismiss-conflict').addEventListener('click', async () => {
+      await chrome.storage.local.set({ conflicts: [] });
+      $('#conflict-banner').classList.remove('visible');
+    });
+
+    // Modal dismiss
+    $('#modal-macro').addEventListener('click', (e) => { if (e.target === $('#modal-macro')) closeMacroModal(); });
+    $('#modal-folder').addEventListener('click', (e) => { if (e.target === $('#modal-folder')) closeFolderModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMacroModal(); closeFolderModal(); } });
+
+    init();
+  </script>
+</body>
+</html>
