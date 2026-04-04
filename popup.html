@@ -292,6 +292,17 @@
     const recentSection = document.getElementById('recent-section');
     let allMacros = [];
 
+    // Inline default macros — popup can seed these without background worker
+    const POPUP_DEFAULT_MACROS = [
+      { id: 'default-1', trigger: 'sig', body: 'Best regards,\n{{input:Your Name}}', folder: 'Email', enabled: true, useCount: 0, createdAt: Date.now(), updatedAt: Date.now() },
+      { id: 'default-2', trigger: 'today', body: '{{date}}', folder: 'Dates', enabled: true, useCount: 0, createdAt: Date.now(), updatedAt: Date.now() },
+      { id: 'default-3', trigger: 'now', body: '{{time}}', folder: 'Dates', enabled: true, useCount: 0, createdAt: Date.now(), updatedAt: Date.now() },
+      { id: 'default-4', trigger: 'cb', body: '{{clipboard}}', folder: 'Utility', enabled: true, useCount: 0, createdAt: Date.now(), updatedAt: Date.now() },
+      { id: 'default-5', trigger: 'reply', body: 'Hi {{input:Name}},\n\nThank you for reaching out. {{cursor}}\n\nBest,\n{{macro:sig}}', folder: 'Email', enabled: true, useCount: 0, createdAt: Date.now(), updatedAt: Date.now() },
+      { id: 'default-6', trigger: 'ack', body: 'Thanks for reporting this. I\'m looking into it now and will follow up within 24 hours.', folder: 'Support', enabled: true, useCount: 0, createdAt: Date.now(), updatedAt: Date.now() },
+      { id: 'default-7', trigger: 'meeting', body: 'Hi {{input:Name}},\n\nCould we schedule a quick call on {{input:Date/Time}}? I\'d like to discuss {{input:Topic}}.\n\nLet me know what works.\n\n{{macro:sig}}', folder: 'Email', enabled: true, useCount: 0, createdAt: Date.now(), updatedAt: Date.now() }
+    ];
+
     // Highlight variables in preview text
     function highlightVars(text) {
       return text
@@ -300,12 +311,37 @@
     }
 
     async function loadMacros() {
-      let { macros = [], session, stats = {} } = await chrome.storage.local.get(['macros', 'session', 'stats']);
+      let macros = [];
+      let session = null;
+      let stats = {};
 
-      // If no macros exist, trigger a reload from background to seed defaults
+      try {
+        const data = await chrome.storage.local.get(['macros', 'session', 'stats']);
+        macros = data.macros || [];
+        session = data.session || null;
+        stats = data.stats || {};
+      } catch (e) {
+        console.error('[SnapText Popup] Storage read failed:', e);
+      }
+
+      // If empty, try background worker first, then fall back to inline defaults
       if (!macros || macros.length === 0) {
-        const result = await chrome.runtime.sendMessage({ type: 'GET_MACROS' });
-        macros = result?.macros || [];
+        try {
+          const result = await chrome.runtime.sendMessage({ type: 'GET_MACROS' });
+          macros = result?.macros || [];
+        } catch (e) {
+          console.warn('[SnapText Popup] Background unreachable, seeding defaults locally');
+        }
+      }
+
+      // Last resort: seed from inline defaults
+      if (!macros || macros.length === 0) {
+        macros = POPUP_DEFAULT_MACROS;
+        try {
+          await chrome.storage.local.set({ macros });
+        } catch (e) {
+          console.error('[SnapText Popup] Failed to save defaults:', e);
+        }
       }
 
       allMacros = macros.filter(m => m.enabled !== false);

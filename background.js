@@ -1,3 +1,5 @@
+console.log('[SnapText] Service worker starting...');
+
 /**
  * SnapText Background Service Worker v3
  *
@@ -86,23 +88,33 @@ const DEFAULT_MACROS = [
 
 // ── Initialize on install ───────────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(async (details) => {
-  if (details.reason === 'install') {
+  console.log('[SnapText] onInstalled fired, reason:', details.reason);
+  try {
     const { macros } = await chrome.storage.local.get(['macros']);
     if (!macros || macros.length === 0) {
       await chrome.storage.local.set({ macros: DEFAULT_MACROS });
+      console.log('[SnapText] Default macros seeded');
     }
-    await chrome.storage.local.set({
-      settings: {
-        triggerChar: ';',
-        expandOn: ['Space', 'Tab', 'Enter'],
-        syncEnabled: false,
-        blockedDomains: []
-      },
-      stats: {},
-      charsSaved: 0,
-      conflicts: [],
-      folders: []
-    });
+
+    // Always ensure settings exist
+    const { settings } = await chrome.storage.local.get(['settings']);
+    if (!settings) {
+      await chrome.storage.local.set({
+        settings: {
+          triggerChar: ';',
+          expandOn: ['Space', 'Tab', 'Enter'],
+          syncEnabled: false,
+          blockedDomains: []
+        },
+        stats: {},
+        charsSaved: 0,
+        conflicts: [],
+        folders: []
+      });
+      console.log('[SnapText] Default settings seeded');
+    }
+  } catch (e) {
+    console.error('[SnapText] onInstalled error:', e);
   }
 });
 
@@ -933,15 +945,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'GET_MACROS') {
-    chrome.storage.local.get(['macros'], async (result) => {
-      let macros = result.macros || [];
-      // Seed defaults if storage is empty (e.g. reload without fresh install)
-      if (macros.length === 0) {
-        macros = DEFAULT_MACROS;
-        await chrome.storage.local.set({ macros });
+    (async () => {
+      try {
+        const result = await chrome.storage.local.get(['macros']);
+        let macros = result.macros || [];
+        if (macros.length === 0) {
+          macros = DEFAULT_MACROS;
+          await chrome.storage.local.set({ macros });
+        }
+        sendResponse({ macros });
+      } catch (e) {
+        console.error('GET_MACROS error:', e);
+        sendResponse({ macros: DEFAULT_MACROS });
       }
-      sendResponse({ macros });
-    });
+    })();
     return true;
   }
 
@@ -953,16 +970,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'IMPORT_SHARE_CODE') {
-    const imported = parseShareCode(msg.code || '');
-    if (!imported) {
-      sendResponse({ success: false, error: 'Invalid share code' });
-    } else {
-      chrome.storage.local.get(['macros'], async (result) => {
-        const existing = result.macros || [];
-        await chrome.storage.local.set({ macros: [...existing, ...imported] });
-        sendResponse({ success: true, count: imported.length });
-      });
-    }
+    (async () => {
+      try {
+        const imported = parseShareCode(msg.code || '');
+        if (!imported) {
+          sendResponse({ success: false, error: 'Invalid share code' });
+        } else {
+          const result = await chrome.storage.local.get(['macros']);
+          const existing = result.macros || [];
+          await chrome.storage.local.set({ macros: [...existing, ...imported] });
+          sendResponse({ success: true, count: imported.length });
+        }
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
     return true;
   }
 
@@ -1008,16 +1030,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Import CSV
   if (msg.type === 'IMPORT_CSV') {
-    const imported = parseCSVImport(msg.csv || '');
-    if (!imported) {
-      sendResponse({ success: false, error: 'Invalid CSV format' });
-    } else {
-      chrome.storage.local.get(['macros'], async (result) => {
-        const existing = result.macros || [];
-        await chrome.storage.local.set({ macros: [...existing, ...imported] });
-        sendResponse({ success: true, count: imported.length });
-      });
-    }
+    (async () => {
+      try {
+        const imported = parseCSVImport(msg.csv || '');
+        if (!imported) {
+          sendResponse({ success: false, error: 'Invalid CSV format' });
+        } else {
+          const result = await chrome.storage.local.get(['macros']);
+          const existing = result.macros || [];
+          await chrome.storage.local.set({ macros: [...existing, ...imported] });
+          sendResponse({ success: true, count: imported.length });
+        }
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
     return true;
   }
 
@@ -1038,17 +1065,28 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'RESOLVE_CONFLICT') {
-    chrome.storage.local.get(['conflicts'], async (result) => {
-      const conflicts = (result.conflicts || []).filter(c => c.id !== msg.macroId);
-      await chrome.storage.local.set({ conflicts });
-      sendResponse({ success: true, remaining: conflicts.length });
-    });
+    (async () => {
+      try {
+        const result = await chrome.storage.local.get(['conflicts']);
+        const conflicts = (result.conflicts || []).filter(c => c.id !== msg.macroId);
+        await chrome.storage.local.set({ conflicts });
+        sendResponse({ success: true, remaining: conflicts.length });
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
     return true;
   }
 });
 
 // ── Periodic sync with token refresh ────────────────────────────────────
-chrome.alarms.create('syncMacros', { periodInMinutes: 5 });
+try {
+  chrome.alarms.create('syncMacros', { periodInMinutes: 5 });
+} catch (e) {
+  console.error('[SnapText] Alarm creation failed:', e);
+}
+
+console.log('[SnapText] Service worker initialized successfully');
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === 'syncMacros') {
