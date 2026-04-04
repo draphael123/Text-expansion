@@ -549,6 +549,293 @@
       opacity: 1;
       transform: translateY(0);
     }
+
+    /* ── Web Dashboard Styles ────────────────────────── */
+    .wd-app { display: flex; min-height: 100vh; }
+
+    .wd-sidebar {
+      width: 240px;
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 50;
+    }
+
+    .wd-main { flex: 1; margin-left: 240px; padding: 28px 36px; background: #F8FAFC; min-height: 100vh; }
+
+    .wd-sidebar-logo {
+      padding: 18px 20px;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .wd-sidebar-logo svg { width: 24px; height: 24px; }
+
+    .wd-sidebar-section {
+      padding: 16px 16px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #94A3B8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .wd-add-folder-btn {
+      background: none; border: none; cursor: pointer;
+      color: #94A3B8; font-size: 16px; line-height: 1;
+      padding: 0 2px; border-radius: 3px;
+    }
+    .wd-add-folder-btn:hover { color: var(--blue); }
+
+    .wd-sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.12s;
+      border-radius: 6px;
+      margin: 1px 8px;
+      font-weight: 500;
+    }
+    .wd-sidebar-item:hover { background: var(--blue-bg); color: var(--blue); }
+    .wd-sidebar-item.active { background: var(--blue-bg); color: var(--blue); font-weight: 600; }
+
+    .wd-count {
+      margin-left: auto;
+      font-size: 11px;
+      background: #F1F5F9;
+      color: #94A3B8;
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .wd-sidebar-item.active .wd-count { background: var(--blue); color: #fff; }
+
+    .wd-folder-actions { margin-left: auto; display: none; gap: 2px; }
+    .wd-sidebar-item:hover .wd-folder-actions { display: flex; }
+    .wd-sidebar-item:hover .wd-count { display: none; }
+    .wd-folder-action-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 11px; color: #94A3B8; padding: 1px 3px; border-radius: 3px;
+    }
+    .wd-folder-action-btn:hover { color: var(--blue); background: var(--blue-50); }
+    .wd-folder-action-btn.danger:hover { color: #EF4444; background: #FEF2F2; }
+
+    .wd-sidebar-footer {
+      margin-top: auto;
+      padding: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .wd-user-info { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; }
+
+    .wd-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .wd-topbar h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+    .wd-sync-status { font-size: 12px; color: var(--text-muted); }
+
+    .wd-stats-row { display: flex; gap: 14px; margin-bottom: 24px; }
+    .wd-stat-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      min-width: 140px;
+    }
+    .wd-stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; margin-bottom: 4px; }
+    .wd-stat-value { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -1px; }
+
+    .wd-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      background: #fff;
+      color: var(--text);
+      transition: all 0.12s;
+      font-family: inherit;
+    }
+    .wd-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .wd-btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .wd-btn-primary:hover { background: var(--blue-dark); }
+    .wd-btn-danger { color: #EF4444; border-color: transparent; background: transparent; }
+    .wd-btn-danger:hover { background: #FEF2F2; }
+    .wd-btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    .wd-search-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .wd-search-input {
+      flex: 1; padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 13px;
+      outline: none;
+      background: #fff;
+      font-family: inherit;
+    }
+    .wd-search-input:focus { border-color: var(--blue); }
+
+    .wd-macro-table {
+      width: 100%; border-collapse: collapse;
+      background: #fff;
+      border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .wd-macro-table th {
+      text-align: left; padding: 10px 16px;
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: #94A3B8;
+      background: #F8FAFC;
+      border-bottom: 1px solid var(--border);
+    }
+    .wd-macro-table td {
+      padding: 12px 16px; font-size: 13px;
+      border-bottom: 1px solid #F1F5F9;
+      vertical-align: middle;
+    }
+    .wd-macro-table tr:last-child td { border-bottom: none; }
+    .wd-macro-table tr:hover td { background: #FAFCFF; }
+    .wd-trigger-cell { font-family: 'SF Mono', Monaco, Consolas, monospace; color: var(--blue); font-weight: 600; font-size: 12px; }
+    .wd-body-cell { color: var(--text-muted); max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wd-folder-badge { display: inline-block; background: var(--blue-bg); color: var(--blue); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+    .wd-use-count { font-size: 12px; color: #94A3B8; font-weight: 500; }
+    .wd-actions-cell { display: flex; gap: 4px; }
+
+    .wd-toggle-switch { position: relative; width: 34px; height: 18px; cursor: pointer; display: inline-block; }
+    .wd-toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .wd-toggle-slider { position: absolute; inset: 0; background: #CBD5E1; border-radius: 10px; transition: 0.2s; }
+    .wd-toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: 0.2s; }
+    .wd-toggle-switch input:checked + .wd-toggle-slider { background: var(--blue); }
+    .wd-toggle-switch input:checked + .wd-toggle-slider::before { transform: translateX(16px); }
+
+    .wd-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .wd-modal-overlay.visible { display: flex; }
+
+    .wd-modal {
+      background: #fff; border-radius: 14px;
+      width: 500px; max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+      animation: wd-modal-in 0.15s ease-out;
+    }
+    @keyframes wd-modal-in {
+      from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .wd-modal-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .wd-modal-header h3 { font-size: 16px; font-weight: 700; }
+    .wd-modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted); width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+    .wd-modal-close:hover { background: #F8FAFC; }
+    .wd-modal-body { padding: 20px 24px; }
+    .wd-modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+    .wd-form-group { margin-bottom: 14px; }
+    .wd-form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: var(--text); }
+    .wd-form-group input, .wd-form-group textarea, .wd-form-group select {
+      width: 100%; padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px; font-size: 13px;
+      outline: none; font-family: inherit;
+    }
+    .wd-form-group input:focus, .wd-form-group textarea:focus { border-color: var(--blue); }
+    .wd-form-group textarea { min-height: 100px; resize: vertical; font-family: 'SF Mono', Monaco, Consolas, monospace; }
+    .wd-form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .wd-form-hint code { background: #F8FAFC; padding: 1px 5px; border-radius: 3px; font-size: 11px; color: var(--blue); border: 1px solid var(--border); }
+    .wd-form-error { font-size: 12px; color: #EF4444; margin-top: 4px; display: none; }
+    .wd-form-error.visible { display: block; }
+
+    .wd-preview-pane { background: #F8FAFC; border: 1px solid var(--border); border-radius: 7px; padding: 12px 14px; font-size: 13px; color: var(--text-muted); min-height: 50px; white-space: pre-wrap; word-wrap: break-word; }
+
+    .wd-share-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .wd-share-tab { padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: 0.15s; }
+    .wd-share-tab:hover { color: var(--text); }
+    .wd-share-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    .wd-settings-section { background: #fff; border-radius: 10px; border: 1px solid var(--border); padding: 20px 24px; margin-bottom: 14px; }
+    .wd-settings-section h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+    .wd-setting-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #F1F5F9; }
+    .wd-setting-row:last-child { border-bottom: none; }
+    .wd-setting-label { font-size: 13px; font-weight: 500; }
+    .wd-setting-desc { font-size: 11px; color: var(--text-muted); }
+
+    .wd-domain-list { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .wd-domain-tag { display: inline-flex; align-items: center; gap: 4px; background: #F8FAFC; border: 1px solid var(--border); padding: 3px 8px; border-radius: 5px; font-size: 12px; color: var(--text-muted); }
+    .wd-remove { cursor: pointer; color: #EF4444; font-weight: 700; font-size: 14px; margin-left: 2px; }
+    .wd-domain-add-row { display: flex; gap: 6px; margin-top: 8px; }
+    .wd-domain-add-row input { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; }
+
+    .wd-auth-card { background: #fff; border-radius: 12px; border: 1px solid var(--border); padding: 32px; text-align: center; max-width: 380px; margin: 40px auto; }
+    .wd-auth-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .wd-auth-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+    .wd-auth-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; outline: none; margin-bottom: 10px; font-family: inherit; }
+    .wd-auth-input:focus { border-color: var(--blue); }
+
+    .wd-explore-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .wd-explore-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 18px; transition: border-color 0.15s; }
+    .wd-explore-card:hover { border-color: var(--blue-light); }
+    .wd-ec-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .wd-ec-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .wd-ec-meta { display: flex; gap: 12px; font-size: 11px; color: #94A3B8; margin-bottom: 12px; }
+    .wd-share-code-hint { font-size: 11px; color: #94A3B8; margin-left: 8px; }
+
+    .wd-my-shares-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+    .wd-my-shares-table th { text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; background: #F8FAFC; border-bottom: 1px solid var(--border); }
+    .wd-my-shares-table td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid #F1F5F9; }
+    .wd-share-code-cell { font-family: monospace; color: var(--blue); font-weight: 600; }
+    .wd-public-yes { color: #10B981; }
+
+    .wd-export-dropdown { position: relative; display: inline-block; }
+    .wd-export-menu { display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12); min-width: 180px; z-index: 100; padding: 4px; margin-top: 4px; }
+    .wd-export-menu.visible { display: block; }
+    .wd-export-menu-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; border-radius: 6px; color: var(--text); border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
+    .wd-export-menu-item:hover { background: var(--blue-bg); color: var(--blue); }
+    .wd-emi-icon { font-size: 15px; width: 20px; text-align: center; }
+    .wd-emi-desc { font-size: 11px; color: #94A3B8; }
+
+    .wd-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .wd-empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .wd-empty p { font-size: 14px; margin-bottom: 16px; }
+
+    .wd-success-box { background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 14px; }
+    .wd-success-title { font-size: 13px; font-weight: 600; color: #065F46; margin-bottom: 8px; }
+    .wd-success-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+    .wd-share-code-display { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 16px; font-weight: 600; letter-spacing: 1px; color: var(--blue); }
+    .wd-copy-btn { margin-left: auto; cursor: pointer; background: var(--blue-bg); border: none; padding: 4px 10px; border-radius: 5px; font-size: 12px; color: var(--blue); font-weight: 600; }
+    .wd-copy-btn:hover { background: var(--blue-50); }
+    .wd-error-text { color: #EF4444; font-size: 13px; }
+
+    --danger: #EF4444;
+
+    @media (max-width: 768px) {
+      .wd-sidebar { width: 100%; position: relative; }
+      .wd-main { margin-left: 0; }
+    }
   </style>
 </head>
 <body>
@@ -566,12 +853,17 @@
         <a href="#how-it-works">How It Works</a>
         <a href="#features">Features</a>
         <a href="#variables">Variables</a>
-        <a href="downloads/snaptext-extension-v2.0.1.zip" class="btn-install" download>
+        <a href="#" id="nav-signin" class="btn-install">Sign In</a>
+        <a href="#" id="nav-dashboard" class="btn-install" style="display:none;">My Dashboard</a>
+        <a href="downloads/snaptext-extension-v2.0.2.zip" class="btn-install" download>
           Download Extension
         </a>
       </div>
     </nav>
   </div>
+
+  <!-- Landing Page Content -->
+  <div id="landing-page">
 
   <!-- Hero -->
   <section class="hero">
@@ -579,13 +871,13 @@
     <h1>Type a shortcut.<br /><span class="accent">Get the full text.</span></h1>
     <p class="hero-sub">SnapText turns short triggers into complete text snippets. Smart variables, cross-device sync, and it works in every text field on the web.</p>
     <div class="hero-actions">
-      <a href="downloads/snaptext-extension-v2.0.1.zip" class="btn-install-lg" download>
+      <a href="downloads/snaptext-extension-v2.0.2.zip" class="btn-install-lg" download>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download SnapText — It's Free
       </a>
       <a href="#how-it-works" class="btn-secondary">See how it works</a>
     </div>
-    <p style="font-size:13px;color:var(--text-muted);margin-top:12px;">v2.0.1 &middot; 36 KB &middot; Updated April 4, 2026 &middot; <a href="https://github.com/draphael123/Text-expansion" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:500;">View on GitHub</a></p>
+    <p style="font-size:13px;color:var(--text-muted);margin-top:12px;">v2.0.2 &middot; 36 KB &middot; Updated April 4, 2026 &middot; <a href="https://github.com/draphael123/Text-expansion" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:500;">View on GitHub</a></p>
     <p class="hero-note">Works on Chrome, Brave, Edge, Arc, and any Chromium browser</p>
   </section>
 
@@ -620,7 +912,7 @@
 
   <!-- What's New -->
   <section style="max-width:720px;margin:0 auto;padding:32px 24px 16px;">
-    <h2 style="text-align:center;font-size:24px;font-weight:800;margin-bottom:20px;">What's New in v2.0.1</h2>
+    <h2 style="text-align:center;font-size:24px;font-weight:800;margin-bottom:20px;">What's New in v2.0.2</h2>
     <div style="background:var(--bg-alt);border:1px solid var(--border);border-radius:12px;padding:24px;">
       <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;color:var(--text);">
         <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Firebase cloud sync</strong> — back up your macros and sync across devices with a free account</span></div>
@@ -840,7 +1132,7 @@
   <section class="cta">
     <h2>Start typing less today.</h2>
     <p>Download, unzip, load in Chrome. No account required. Free forever.</p>
-    <a href="downloads/snaptext-extension-v2.0.1.zip" class="btn-install-white" download>
+    <a href="downloads/snaptext-extension-v2.0.2.zip" class="btn-install-white" download>
       Download SnapText — It's Free
     </a>
   </section>
@@ -849,6 +1141,296 @@
   <footer>
     &copy; 2026 SnapText. Free and open source. <a href="https://github.com/draphael123/Text-expansion" target="_blank" style="color:inherit;text-decoration:underline;opacity:0.7;">GitHub</a>
   </footer>
+
+  </div><!-- End landing-page -->
+
+  <!-- Auth Modal -->
+  <div class="wd-modal-overlay" id="auth-modal">
+    <div class="wd-modal" style="width:380px;">
+      <div class="wd-modal-header">
+        <h3>Sign in to SnapText</h3>
+        <button class="wd-modal-close" id="auth-modal-close">&times;</button>
+      </div>
+      <div class="wd-modal-body">
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Sign in to manage your macros from the web, sync across devices, and share snippet packs.</p>
+        <div class="wd-form-group">
+          <label>Email</label>
+          <input type="email" id="auth-modal-email" placeholder="you@example.com" />
+        </div>
+        <div class="wd-form-group">
+          <label>Password</label>
+          <input type="password" id="auth-modal-password" placeholder="Password" />
+        </div>
+        <div id="auth-modal-error" style="display:none;color:var(--danger);font-size:13px;margin-bottom:12px;"></div>
+      </div>
+      <div class="wd-modal-footer">
+        <button class="wd-btn" id="auth-modal-signup">Create Account</button>
+        <button class="wd-btn wd-btn-primary" id="auth-modal-signin">Sign In</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Web Dashboard -->
+  <div id="web-dashboard" class="wd-app" style="display:none;">
+    <nav class="wd-sidebar">
+      <div class="wd-sidebar-logo">
+        <svg viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="5" fill="#2563EB"/><path d="M13.5 5L9 13h4L11 19l5-8h-4l1.5-6z" fill="white"/></svg>
+        SnapText
+      </div>
+      <div class="wd-sidebar-section">Menu</div>
+      <div class="wd-sidebar-item active" data-view="macros">&#128221; All Macros <span class="wd-count" id="wd-count-all">0</span></div>
+      <div class="wd-sidebar-item" data-view="share">&#128279; Share &amp; Explore</div>
+      <div class="wd-sidebar-item" data-view="settings">&#9881; Settings</div>
+      <div class="wd-sidebar-item" data-view="account">&#128100; Account</div>
+      <div class="wd-sidebar-section">Folders <button class="wd-add-folder-btn" id="wd-btn-add-folder" title="New folder">+</button></div>
+      <div id="wd-folder-list"></div>
+      <div class="wd-sidebar-footer">
+        <div class="wd-user-info" id="wd-user-info">Not signed in</div>
+        <div class="wd-export-dropdown">
+          <button class="wd-btn wd-btn-sm" id="wd-btn-export-toggle">&#128228; Export &#9662;</button>
+          <div class="wd-export-menu" id="wd-export-menu">
+            <button class="wd-export-menu-item" id="wd-btn-export-json">
+              <span class="wd-emi-icon">{ }</span>
+              <div><div>JSON</div><div class="wd-emi-desc">Full macro data</div></div>
+            </button>
+            <button class="wd-export-menu-item" id="wd-btn-export-csv">
+              <span class="wd-emi-icon">&#128202;</span>
+              <div><div>CSV</div><div class="wd-emi-desc">Spreadsheet-friendly</div></div>
+            </button>
+          </div>
+        </div>
+        <button class="wd-btn wd-btn-sm" id="wd-btn-import" style="margin-top:6px;">&#128229; Import</button>
+      </div>
+    </nav>
+
+    <div class="wd-main">
+      <!-- MACROS VIEW -->
+      <div id="wd-view-macros">
+        <div class="wd-topbar">
+          <h2 id="wd-view-title">All Macros</h2>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span class="wd-sync-status">Last sync: <span id="wd-sync-status">-</span></span>
+            <button class="wd-btn wd-btn-primary" id="wd-btn-new-macro">+ New Macro</button>
+          </div>
+        </div>
+
+        <div class="wd-stats-row" id="wd-stats-row">
+          <div class="wd-stat-card"><div class="wd-stat-label">Total Macros</div><div class="wd-stat-value" id="wd-stat-total">0</div></div>
+        </div>
+
+        <div class="wd-search-row">
+          <input type="text" class="wd-search-input" id="wd-search" placeholder="Search by trigger, content, or folder..." />
+        </div>
+        <div id="wd-macro-table-wrap"></div>
+      </div>
+
+      <!-- SHARE & EXPLORE VIEW -->
+      <div id="wd-view-share" style="display:none;">
+        <div class="wd-topbar"><h2>Share &amp; Explore</h2></div>
+
+        <div class="wd-share-tabs">
+          <div class="wd-share-tab active" data-stab="publish">Publish</div>
+          <div class="wd-share-tab" data-stab="import">Import</div>
+          <div class="wd-share-tab" data-stab="explore">Explore</div>
+          <div class="wd-share-tab" data-stab="my-shares">My Shares</div>
+        </div>
+
+        <!-- Publish tab -->
+        <div id="wd-stab-publish">
+          <div class="wd-settings-section">
+            <h3>Share macros with other users</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+              Publish a folder as a shareable pack. You'll get a short code that anyone can use to import your macros.
+            </p>
+            <div class="wd-form-group">
+              <label>Folder to share</label>
+              <select id="wd-share-folder-select"></select>
+            </div>
+            <div class="wd-form-group">
+              <label>Pack title</label>
+              <input type="text" id="wd-share-title" placeholder="e.g. Customer Support Templates" />
+            </div>
+            <div class="wd-form-group">
+              <label>Description (optional)</label>
+              <input type="text" id="wd-share-desc" placeholder="A brief description of what's included" />
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+              <label class="wd-toggle-switch">
+                <input type="checkbox" id="wd-share-public" />
+                <span class="wd-toggle-slider"></span>
+              </label>
+              <div>
+                <div style="font-size:13px;font-weight:500;">List publicly</div>
+                <div style="font-size:11px;color:var(--text-muted);">Others can discover this in the Explore tab</div>
+              </div>
+            </div>
+            <button class="wd-btn wd-btn-primary" id="wd-btn-publish-cloud">Publish to Cloud</button>
+            <div id="wd-publish-result" style="display:none;margin-top:14px;"></div>
+          </div>
+        </div>
+
+        <!-- Import tab -->
+        <div id="wd-stab-import" style="display:none;">
+          <div class="wd-settings-section">
+            <h3>Import from a share code</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+              Enter an 8-character cloud share code to import macros.
+            </p>
+            <div class="wd-form-group">
+              <label>Share code</label>
+              <input type="text" id="wd-cloud-import-code" placeholder="e.g. AbC3dEfG" style="font-family:monospace;font-size:16px;letter-spacing:1px;text-align:center;" />
+            </div>
+            <button class="wd-btn wd-btn-primary" id="wd-btn-import-cloud">Import</button>
+            <div id="wd-import-result" style="display:none;margin-top:14px;"></div>
+          </div>
+        </div>
+
+        <!-- Explore tab -->
+        <div id="wd-stab-explore" style="display:none;">
+          <div id="wd-explore-grid" class="wd-explore-grid"></div>
+          <div id="wd-explore-empty" class="wd-empty" style="display:none;">
+            <div class="wd-empty-icon">&#127758;</div>
+            <p>No public snippet packs found. Be the first to share!</p>
+          </div>
+        </div>
+
+        <!-- My Shares tab -->
+        <div id="wd-stab-my-shares" style="display:none;">
+          <div id="wd-my-shares-wrap"></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div id="wd-view-settings" style="display:none;">
+        <div class="wd-topbar"><h2>Settings</h2></div>
+
+        <div class="wd-settings-section">
+          <h3>Expansion</h3>
+          <div class="wd-setting-row">
+            <div>
+              <div class="wd-setting-label">Trigger character</div>
+              <div class="wd-setting-desc">Character prefix for macros (default: ;)</div>
+            </div>
+            <input type="text" id="wd-set-trigger" style="width:50px;text-align:center;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-weight:600;" value=";" />
+          </div>
+        </div>
+
+        <div class="wd-settings-section">
+          <h3>Blocked Sites</h3>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+            SnapText won't expand macros on these domains (in the extension).
+          </p>
+          <div class="wd-domain-list" id="wd-domain-list"></div>
+          <div class="wd-domain-add-row">
+            <input type="text" id="wd-domain-input" placeholder="e.g. bank.com" />
+            <button class="wd-btn wd-btn-sm wd-btn-primary" id="wd-btn-add-domain">Add</button>
+          </div>
+        </div>
+
+        <div class="wd-settings-section">
+          <h3>Sync</h3>
+          <div class="wd-setting-row">
+            <div>
+              <div class="wd-setting-label">Cloud sync</div>
+              <div class="wd-setting-desc">Back up and sync macros across devices</div>
+            </div>
+            <label class="wd-toggle-switch">
+              <input type="checkbox" id="wd-set-sync" />
+              <span class="wd-toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="wd-settings-section">
+          <button class="wd-btn wd-btn-primary" id="wd-btn-save-settings">Save Settings</button>
+        </div>
+      </div>
+
+      <!-- ACCOUNT VIEW -->
+      <div id="wd-view-account" style="display:none;">
+        <div class="wd-topbar"><h2>Account</h2></div>
+        <div id="wd-auth-logged-out">
+          <div class="wd-auth-card">
+            <h3>Sign in to back up & sync</h3>
+            <p style="margin-bottom:12px;">Create a free account to back up your macros and sync them across devices.</p>
+            <input type="email" class="wd-auth-input" id="wd-auth-email" placeholder="Email address" />
+            <input type="password" class="wd-auth-input" id="wd-auth-password" placeholder="Password" />
+            <button class="wd-btn wd-btn-primary" style="width:100%;margin-bottom:8px;justify-content:center;" id="wd-btn-signin">Sign In</button>
+            <button class="wd-btn" style="width:100%;justify-content:center;" id="wd-btn-signup">Create Account</button>
+          </div>
+        </div>
+        <div id="wd-auth-logged-in" style="display:none;">
+          <div class="wd-auth-card">
+            <h3>&#10003; Signed in</h3>
+            <p id="wd-auth-user-email"></p>
+            <button class="wd-btn" id="wd-btn-sync-now" style="width:100%;margin-bottom:8px;justify-content:center;">&#128260; Sync Now</button>
+            <button class="wd-btn wd-btn-danger" style="width:100%;justify-content:center;" id="wd-btn-signout">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Macro editor modal -->
+    <div class="wd-modal-overlay" id="wd-modal-macro">
+      <div class="wd-modal">
+        <div class="wd-modal-header">
+          <h3 id="wd-modal-title">New Macro</h3>
+          <button class="wd-modal-close" id="wd-modal-close">&times;</button>
+        </div>
+        <div class="wd-modal-body">
+          <div class="wd-form-group">
+            <label>Trigger</label>
+            <input type="text" id="wd-macro-trigger" placeholder="e.g. sig, addr, reply" />
+            <div class="wd-form-hint">Type <code>;</code><em>trigger</em> then Space to expand</div>
+            <div class="wd-form-error" id="wd-trigger-error">A macro with this trigger already exists.</div>
+          </div>
+          <div class="wd-form-group">
+            <label>Expansion body</label>
+            <textarea id="wd-macro-body" placeholder="The text that will be inserted..."></textarea>
+            <div class="wd-form-hint">
+              Variables: <code>{{date}}</code> <code>{{time}}</code> <code>{{clipboard}}</code> <code>{{cursor}}</code> <code>{{input:Label}}</code>
+            </div>
+          </div>
+          <div class="wd-form-group">
+            <label>Preview</label>
+            <div class="wd-preview-pane" id="wd-macro-preview">Type in the body above to see a preview...</div>
+          </div>
+          <div class="wd-form-group">
+            <label>Folder</label>
+            <input type="text" id="wd-macro-folder" placeholder="e.g. Email, Work, Personal" />
+          </div>
+        </div>
+        <div class="wd-modal-footer">
+          <button class="wd-btn" id="wd-modal-cancel">Cancel</button>
+          <button class="wd-btn wd-btn-danger" id="wd-modal-delete" style="display:none;">Delete</button>
+          <button class="wd-btn wd-btn-primary" id="wd-modal-save">Save Macro</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Folder modal -->
+    <div class="wd-modal-overlay" id="wd-modal-folder">
+      <div class="wd-modal" style="width:380px;">
+        <div class="wd-modal-header">
+          <h3 id="wd-folder-modal-title">New Folder</h3>
+          <button class="wd-modal-close" id="wd-folder-modal-close">&times;</button>
+        </div>
+        <div class="wd-modal-body">
+          <div class="wd-form-group">
+            <label>Folder name</label>
+            <input type="text" id="wd-folder-name-input" placeholder="e.g. Sales, Support, Personal" />
+            <div class="wd-form-error" id="wd-folder-error">This folder already exists.</div>
+          </div>
+        </div>
+        <div class="wd-modal-footer">
+          <button class="wd-btn" id="wd-folder-modal-cancel">Cancel</button>
+          <button class="wd-btn wd-btn-primary" id="wd-folder-modal-save">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <input type="file" id="wd-file-import" accept=".json,.csv" style="display:none;" />
+  </div>
 
   <!-- Scripts -->
   <script>
@@ -920,5 +1502,6 @@
     });
     demoObserver.observe(document.querySelector('.demo'));
   </script>
+  <script src="web-dashboard.js"></script>
 </body>
 </html>
