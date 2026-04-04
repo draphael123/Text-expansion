@@ -24,9 +24,6 @@
       "all_frames": true
     }
   ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://*.firebaseio.com"
-  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
