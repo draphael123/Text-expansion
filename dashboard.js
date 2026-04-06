@@ -392,6 +392,18 @@ function populateShareFolders() {
     folders.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
 }
 
+// Get the share URL base - works for both extension dashboard and web
+function getShareUrlBase() {
+  // Use the hosted site URL for share links
+  return 'https://draphael123.github.io/Text-expansion';
+}
+
+// Generate QR code as data URL (simple implementation)
+function generateQRCode(text, size = 150) {
+  // We'll use a simple QR code API for now - can be replaced with local lib later
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
+}
+
 async function publishToCloud() {
   const folder = $('#share-folder-select').value;
   const title = $('#share-title').value.trim();
@@ -409,28 +421,125 @@ async function publishToCloud() {
 
   const box = $('#publish-result');
   if (result.success) {
+    const shareUrl = `${getShareUrlBase()}/#share/${result.shareCode}`;
     box.innerHTML = `
-      <div style="background:var(--success-bg);border:1px solid #A7F3D0;border-radius:8px;padding:14px;">
-        <div style="font-size:13px;font-weight:600;color:#065F46;margin-bottom:8px;">Published!</div>
-        <div class="share-code-display">
-          ${result.shareCode}
-          <button class="copy-btn" id="btn-copy-share-code">Copy</button>
+      <div class="share-result-box">
+        <div class="share-result-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Published successfully!
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">
-          Share this code with anyone. They can import in SnapText's Import tab.
+        <div class="share-link-box">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text);">Share Link</div>
+          <input type="text" class="share-link-input" id="share-link-input" value="${shareUrl}" readonly onclick="this.select()" />
+          <div class="share-actions-row">
+            <button class="share-action-btn primary" id="btn-copy-link">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy Link
+            </button>
+            <button class="share-action-btn" id="btn-copy-code">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              Copy Code: ${result.shareCode}
+            </button>
+            <button class="share-action-btn" id="btn-show-qr">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              QR Code
+            </button>
+          </div>
+          <div id="qr-container" class="share-qr-container" style="display:none;">
+            <img id="qr-image" src="" alt="QR Code" style="width:150px;height:150px;" />
+            <div class="share-qr-hint">Scan to import macros instantly</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);">
+          <strong>${toShare.length}</strong> macro(s) shared ${isPublic ? '(publicly listed)' : '(private link)'}
         </div>
       </div>`;
-    const copyBtn = $('#btn-copy-share-code');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(result.shareCode);
-        copyBtn.textContent = 'Copied!';
-      });
-    }
+
+    // Copy link button
+    $('#btn-copy-link').addEventListener('click', function() {
+      navigator.clipboard.writeText(shareUrl);
+      this.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+      setTimeout(() => {
+        this.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Link';
+      }, 2000);
+    });
+
+    // Copy code button
+    $('#btn-copy-code').addEventListener('click', function() {
+      navigator.clipboard.writeText(result.shareCode);
+      this.textContent = 'Copied!';
+      setTimeout(() => {
+        this.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Copy Code: ${result.shareCode}`;
+      }, 2000);
+    });
+
+    // QR code toggle
+    $('#btn-show-qr').addEventListener('click', function() {
+      const container = $('#qr-container');
+      if (container.style.display === 'none') {
+        const qrImg = $('#qr-image');
+        qrImg.src = generateQRCode(shareUrl);
+        container.style.display = 'block';
+        this.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Hide QR';
+      } else {
+        container.style.display = 'none';
+        this.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> QR Code';
+      }
+    });
   } else {
     box.innerHTML = `<div style="color:var(--danger);font-size:13px;">${result.error || 'Failed to publish. Are you signed in?'}</div>`;
   }
   box.style.display = 'block';
+}
+
+// Share a single macro quickly
+async function shareSingleMacro(macroId) {
+  const macro = macros.find(m => m.id === macroId);
+  if (!macro) return;
+
+  const title = `Macro: ${macro.trigger}`;
+  const result = await chrome.runtime.sendMessage({
+    type: 'PUBLISH_TO_CLOUD',
+    title,
+    description: macro.body.slice(0, 100) + (macro.body.length > 100 ? '...' : ''),
+    macros: [macro],
+    isPublic: false
+  });
+
+  if (result.success) {
+    const shareUrl = `${getShareUrlBase()}/#share/${result.shareCode}`;
+    navigator.clipboard.writeText(shareUrl);
+    showToast(`Link copied! Share: ${result.shareCode}`);
+  } else {
+    alert(result.error || 'Failed to share. Are you signed in?');
+  }
+}
+
+// Simple toast notification
+function showToast(message) {
+  const existing = document.querySelector('.toast-notification');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'toast-notification';
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1F2937;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 9999;
+    animation: slideUp 0.3s ease;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  setTimeout(() => toast.remove(), 3000);
 }
 
 async function importFromCloud() {
@@ -514,9 +623,10 @@ async function loadMyShares() {
     return;
   }
 
+  const baseUrl = getShareUrlBase();
   wrap.innerHTML = `
     <table class="my-shares-table">
-      <thead><tr><th>Title</th><th>Code</th><th>Macros</th><th>Downloads</th><th>Public</th><th></th></tr></thead>
+      <thead><tr><th>Title</th><th>Code</th><th>Macros</th><th>Downloads</th><th>Public</th><th>Actions</th></tr></thead>
       <tbody>${shares.map(s => `
         <tr>
           <td style="font-weight:600;">${esc(s.title)}</td>
@@ -524,11 +634,60 @@ async function loadMyShares() {
           <td>${(s.macros || []).length}</td>
           <td>${s.download_count || 0}</td>
           <td>${s.is_public ? '<span style="color:var(--success);">Yes</span>' : 'No'}</td>
-          <td><button class="btn btn-sm btn-danger" data-delete-share="${s.id}">Delete</button></td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-sm" data-copy-link="${esc(s.share_code)}" title="Copy share link">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Link
+            </button>
+            <button class="btn btn-sm" data-show-qr="${esc(s.share_code)}" title="Show QR code">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            </button>
+            <button class="btn btn-sm btn-danger" data-delete-share="${s.id}" title="Delete">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </td>
         </tr>`).join('')}
       </tbody>
-    </table>`;
+    </table>
+    <div id="my-shares-qr" style="display:none;margin-top:16px;text-align:center;padding:20px;background:white;border:1px solid var(--border);border-radius:10px;">
+      <img id="my-shares-qr-img" src="" style="width:150px;height:150px;margin-bottom:8px;" />
+      <div style="font-size:12px;color:var(--text-muted);">Scan to import</div>
+      <button class="btn btn-sm" id="btn-close-my-qr" style="margin-top:10px;">Close</button>
+    </div>`;
 
+  // Copy link buttons
+  wrap.querySelectorAll('[data-copy-link]').forEach(el => {
+    el.addEventListener('click', () => {
+      const code = el.dataset.copyLink;
+      const shareUrl = `${baseUrl}/#share/${code}`;
+      navigator.clipboard.writeText(shareUrl);
+      const originalHTML = el.innerHTML;
+      el.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+      setTimeout(() => { el.innerHTML = originalHTML; }, 1500);
+    });
+  });
+
+  // QR buttons
+  wrap.querySelectorAll('[data-show-qr]').forEach(el => {
+    el.addEventListener('click', () => {
+      const code = el.dataset.showQr;
+      const shareUrl = `${baseUrl}/#share/${code}`;
+      const qrContainer = $('#my-shares-qr');
+      const qrImg = $('#my-shares-qr-img');
+      qrImg.src = generateQRCode(shareUrl);
+      qrContainer.style.display = 'block';
+    });
+  });
+
+  // Close QR button
+  const closeQr = $('#btn-close-my-qr');
+  if (closeQr) {
+    closeQr.addEventListener('click', () => {
+      $('#my-shares-qr').style.display = 'none';
+    });
+  }
+
+  // Delete buttons
   wrap.querySelectorAll('[data-delete-share]').forEach(el => {
     el.addEventListener('click', async () => {
       if (!confirm('Delete this shared pack?')) return;

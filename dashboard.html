@@ -410,6 +410,108 @@
     }
     .share-code-display .copy-btn:hover { background: var(--blue-50); }
 
+    /* Share result with multiple options */
+    .share-result-box {
+      background: var(--success-bg);
+      border: 1px solid #A7F3D0;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .share-result-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #065F46;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .share-link-box {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .share-link-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: monospace;
+      background: var(--bg);
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .share-actions-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .share-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--white);
+      color: var(--text);
+    }
+    .share-action-btn:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .share-action-btn.primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+    .share-action-btn.primary:hover {
+      background: var(--blue-dark);
+    }
+    .share-qr-container {
+      margin-top: 12px;
+      text-align: center;
+      padding: 16px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .share-qr-container canvas {
+      display: block;
+      margin: 0 auto 10px;
+    }
+    .share-qr-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Quick share button in macro row */
+    .macro-share-btn {
+      opacity: 0;
+      padding: 4px 8px;
+      font-size: 11px;
+      background: var(--blue-bg);
+      color: var(--blue);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .trow:hover .macro-share-btn {
+      opacity: 1;
+    }
+    .macro-share-btn:hover {
+      background: var(--blue);
+      color: white;
+    }
+
     .explore-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

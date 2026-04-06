@@ -902,6 +902,16 @@ function populateWdShareFolders() {
     folders.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
 }
 
+// Get the share URL base
+function getShareUrlBase() {
+  return window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+}
+
+// Generate QR code URL
+function generateQRCode(text, size = 150) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
+}
+
 async function wdPublishToCloud() {
   const folder = $('#wd-share-folder-select').value;
   const title = $('#wd-share-title').value.trim();
@@ -917,22 +927,70 @@ async function wdPublishToCloud() {
   const box = $('#wd-publish-result');
 
   if (result.success) {
+    const shareUrl = `${getShareUrlBase()}/#share/${result.shareCode}`;
     box.innerHTML = `
-      <div class="wd-success-box">
-        <div class="wd-success-title">Published!</div>
-        <div class="wd-share-code-display">
-          ${result.shareCode}
-          <button class="wd-copy-btn" id="wd-btn-copy-share-code">Copy</button>
+      <div class="wd-success-box" style="padding:16px;">
+        <div class="wd-success-title" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#065F46" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Published successfully!
         </div>
-        <div class="wd-success-hint">Share this code with anyone. They can import in the Import tab.</div>
+        <div style="background:white;border:1px solid #E2E8F0;border-radius:8px;padding:12px;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Share Link</div>
+          <input type="text" id="wd-share-link-input" value="${shareUrl}" readonly onclick="this.select()" style="width:100%;padding:10px;border:1px solid #E2E8F0;border-radius:6px;font-size:12px;font-family:monospace;background:#F8FAFC;margin-bottom:10px;" />
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="wd-btn wd-btn-sm wd-btn-primary" id="wd-btn-copy-link" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy Link
+            </button>
+            <button class="wd-btn wd-btn-sm" id="wd-btn-copy-code" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              Code: ${result.shareCode}
+            </button>
+            <button class="wd-btn wd-btn-sm" id="wd-btn-show-qr" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              QR Code
+            </button>
+          </div>
+          <div id="wd-qr-container" style="display:none;margin-top:12px;text-align:center;padding:16px;background:#F8FAFC;border-radius:8px;">
+            <img id="wd-qr-image" src="" style="width:150px;height:150px;" />
+            <div style="font-size:11px;color:#64748B;margin-top:8px;">Scan to import macros instantly</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#64748B;">
+          <strong>${toShare.length}</strong> macro(s) shared ${isPublic ? '(publicly listed)' : '(private link)'}
+        </div>
       </div>`;
-    const copyBtn = $('#wd-btn-copy-share-code');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(result.shareCode);
-        copyBtn.textContent = 'Copied!';
-      });
-    }
+
+    // Copy link button
+    $('#wd-btn-copy-link').addEventListener('click', function() {
+      navigator.clipboard.writeText(shareUrl);
+      this.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+      setTimeout(() => {
+        this.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Link';
+      }, 2000);
+    });
+
+    // Copy code button
+    $('#wd-btn-copy-code').addEventListener('click', function() {
+      navigator.clipboard.writeText(result.shareCode);
+      this.textContent = 'Copied!';
+      setTimeout(() => {
+        this.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Code: ${result.shareCode}`;
+      }, 2000);
+    });
+
+    // QR code toggle
+    $('#wd-btn-show-qr').addEventListener('click', function() {
+      const container = $('#wd-qr-container');
+      if (container.style.display === 'none') {
+        $('#wd-qr-image').src = generateQRCode(shareUrl);
+        container.style.display = 'block';
+        this.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Hide QR';
+      } else {
+        container.style.display = 'none';
+        this.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> QR Code';
+      }
+    });
   } else {
     box.innerHTML = `<div class="wd-error-text">${result.error || 'Failed to publish. Are you signed in?'}</div>`;
   }
@@ -1008,9 +1066,10 @@ async function loadWdMyShares() {
     return;
   }
 
+  const baseUrl = getShareUrlBase();
   wrap.innerHTML = `
     <table class="wd-my-shares-table">
-      <thead><tr><th>Title</th><th>Code</th><th>Macros</th><th>Downloads</th><th>Public</th><th></th></tr></thead>
+      <thead><tr><th>Title</th><th>Code</th><th>Macros</th><th>Downloads</th><th>Public</th><th>Actions</th></tr></thead>
       <tbody>${shares.map(s => `
         <tr>
           <td style="font-weight:600;">${esc(s.title)}</td>
@@ -1018,11 +1077,59 @@ async function loadWdMyShares() {
           <td>${(s.macros || []).length}</td>
           <td>${s.download_count || 0}</td>
           <td>${s.is_public ? '<span class="wd-public-yes">Yes</span>' : 'No'}</td>
-          <td><button class="wd-btn wd-btn-sm wd-btn-danger" data-delete-share="${s.id}">Delete</button></td>
+          <td style="white-space:nowrap;">
+            <button class="wd-btn wd-btn-sm" data-copy-link="${esc(s.share_code)}" title="Copy share link">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </button>
+            <button class="wd-btn wd-btn-sm" data-show-qr="${esc(s.share_code)}" title="Show QR code">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            </button>
+            <button class="wd-btn wd-btn-sm wd-btn-danger" data-delete-share="${s.id}" title="Delete">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </td>
         </tr>`).join('')}
       </tbody>
-    </table>`;
+    </table>
+    <div id="wd-my-shares-qr" style="display:none;margin-top:16px;text-align:center;padding:20px;background:white;border:1px solid #E2E8F0;border-radius:10px;">
+      <img id="wd-my-shares-qr-img" src="" style="width:150px;height:150px;margin-bottom:8px;" />
+      <div style="font-size:12px;color:#64748B;">Scan to import</div>
+      <button class="wd-btn wd-btn-sm" id="wd-btn-close-my-qr" style="margin-top:10px;">Close</button>
+    </div>`;
 
+  // Copy link buttons
+  wrap.querySelectorAll('[data-copy-link]').forEach(el => {
+    el.addEventListener('click', () => {
+      const code = el.dataset.copyLink;
+      const shareUrl = `${baseUrl}/#share/${code}`;
+      navigator.clipboard.writeText(shareUrl);
+      const svg = el.innerHTML;
+      el.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+      setTimeout(() => { el.innerHTML = svg; }, 1500);
+    });
+  });
+
+  // QR buttons
+  wrap.querySelectorAll('[data-show-qr]').forEach(el => {
+    el.addEventListener('click', () => {
+      const code = el.dataset.showQr;
+      const shareUrl = `${baseUrl}/#share/${code}`;
+      const qrContainer = $('#wd-my-shares-qr');
+      const qrImg = $('#wd-my-shares-qr-img');
+      qrImg.src = generateQRCode(shareUrl);
+      qrContainer.style.display = 'block';
+    });
+  });
+
+  // Close QR button
+  const closeQr = $('#wd-btn-close-my-qr');
+  if (closeQr) {
+    closeQr.addEventListener('click', () => {
+      $('#wd-my-shares-qr').style.display = 'none';
+    });
+  }
+
+  // Delete buttons
   wrap.querySelectorAll('[data-delete-share]').forEach(el => {
     el.addEventListener('click', async () => {
       if (!confirm('Delete this shared pack?')) return;
@@ -1632,8 +1739,220 @@ function bindWebDashboardEvents() {
   });
 }
 
+// ── Share URL handling ─────────────────────────────────────────────────
+async function handleShareUrl() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#share/')) return;
+
+  const shareCode = hash.replace('#share/', '').trim();
+  if (!shareCode || shareCode.length < 6) return;
+
+  // Clear the hash so it doesn't persist
+  history.replaceState(null, '', window.location.pathname);
+
+  // Show import modal
+  showShareImportModal(shareCode);
+}
+
+function showShareImportModal(shareCode) {
+  // Remove existing modal if any
+  const existing = document.querySelector('.share-import-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.className = 'share-import-modal';
+  modal.innerHTML = `
+    <div class="share-import-backdrop"></div>
+    <div class="share-import-content">
+      <div class="share-import-header">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        <h3>Import Shared Macros</h3>
+      </div>
+      <div class="share-import-body">
+        <p>Someone shared SnapText macros with you!</p>
+        <div class="share-import-code">Code: <strong>${shareCode}</strong></div>
+        <div id="share-import-loading" style="display:none;">
+          <div class="share-import-spinner"></div>
+          <span>Loading shared macros...</span>
+        </div>
+        <div id="share-import-preview" style="display:none;"></div>
+        <div id="share-import-error" style="display:none;color:#DC2626;font-size:13px;margin-top:12px;"></div>
+      </div>
+      <div class="share-import-actions">
+        <button class="share-import-btn secondary" id="share-import-cancel">Cancel</button>
+        <button class="share-import-btn primary" id="share-import-confirm">Import Macros</button>
+      </div>
+    </div>
+  `;
+
+  // Add styles
+  const style = document.createElement('style');
+  style.textContent = `
+    .share-import-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; }
+    .share-import-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); }
+    .share-import-content { position: relative; background: white; border-radius: 16px; padding: 28px; max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .share-import-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .share-import-header h3 { font-size: 18px; font-weight: 700; margin: 0; }
+    .share-import-body p { color: #64748B; font-size: 14px; margin-bottom: 12px; }
+    .share-import-code { background: #F1F5F9; padding: 10px 14px; border-radius: 8px; font-family: monospace; font-size: 14px; margin-bottom: 16px; }
+    .share-import-code strong { color: #2563EB; }
+    .share-import-preview { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-top: 12px; }
+    .share-import-preview-title { font-weight: 600; margin-bottom: 8px; }
+    .share-import-preview-meta { font-size: 12px; color: #64748B; }
+    .share-import-preview-macros { margin-top: 10px; max-height: 120px; overflow-y: auto; font-size: 12px; }
+    .share-import-preview-macro { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+    .share-import-preview-macro code { background: #EFF6FF; color: #2563EB; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+    .share-import-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+    .share-import-btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .share-import-btn.secondary { background: #F1F5F9; border: 1px solid #E2E8F0; color: #475569; }
+    .share-import-btn.secondary:hover { background: #E2E8F0; }
+    .share-import-btn.primary { background: #2563EB; border: none; color: white; }
+    .share-import-btn.primary:hover { background: #1D4ED8; }
+    .share-import-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .share-import-spinner { width: 20px; height: 20px; border: 2px solid #E2E8F0; border-top-color: #2563EB; border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  `;
+  document.head.appendChild(style);
+  document.body.appendChild(modal);
+
+  // Load preview
+  loadSharePreview(shareCode);
+
+  // Event listeners
+  modal.querySelector('.share-import-backdrop').addEventListener('click', () => modal.remove());
+  modal.querySelector('#share-import-cancel').addEventListener('click', () => modal.remove());
+  modal.querySelector('#share-import-confirm').addEventListener('click', () => confirmShareImport(shareCode, modal));
+}
+
+async function loadSharePreview(shareCode) {
+  const loading = document.querySelector('#share-import-loading');
+  const preview = document.querySelector('#share-import-preview');
+  const error = document.querySelector('#share-import-error');
+  const confirmBtn = document.querySelector('#share-import-confirm');
+
+  loading.style.display = 'block';
+  confirmBtn.disabled = true;
+
+  try {
+    // Fetch the shared pack info
+    const url = `${FIREBASE_FIRESTORE_URL}/shared_snippets?pageSize=1`;
+    const queryUrl = `${FIREBASE_FIRESTORE_URL}:runQuery`;
+    const response = await fetch(queryUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: 'shared_snippets' }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath: 'share_code' },
+              op: 'EQUAL',
+              value: { stringValue: shareCode }
+            }
+          },
+          limit: 1
+        }
+      })
+    });
+
+    const results = await response.json();
+    loading.style.display = 'none';
+
+    if (!results[0]?.document) {
+      error.textContent = 'Share code not found. It may have been deleted or expired.';
+      error.style.display = 'block';
+      return;
+    }
+
+    const doc = results[0].document;
+    const fields = doc.fields;
+    const title = fields.title?.stringValue || 'Untitled';
+    const author = fields.author_name?.stringValue || 'Anonymous';
+    const macrosList = fields.macros?.arrayValue?.values || [];
+
+    preview.innerHTML = `
+      <div class="share-import-preview">
+        <div class="share-import-preview-title">${esc(title)}</div>
+        <div class="share-import-preview-meta">by ${esc(author)} &middot; ${macrosList.length} macro(s)</div>
+        <div class="share-import-preview-macros">
+          ${macrosList.slice(0, 5).map(m => {
+            const trigger = m.mapValue?.fields?.trigger?.stringValue || '?';
+            const body = m.mapValue?.fields?.body?.stringValue || '';
+            return `<div class="share-import-preview-macro"><code>;${esc(trigger)}</code> <span style="color:#64748B;">${esc(body.slice(0, 40))}${body.length > 40 ? '...' : ''}</span></div>`;
+          }).join('')}
+          ${macrosList.length > 5 ? `<div style="color:#64748B;font-style:italic;margin-top:6px;">...and ${macrosList.length - 5} more</div>` : ''}
+        </div>
+      </div>
+    `;
+    preview.style.display = 'block';
+    confirmBtn.disabled = false;
+
+  } catch (err) {
+    loading.style.display = 'none';
+    error.textContent = 'Failed to load share preview. Please try again.';
+    error.style.display = 'block';
+  }
+}
+
+async function confirmShareImport(shareCode, modal) {
+  const confirmBtn = modal.querySelector('#share-import-confirm');
+  const originalText = confirmBtn.textContent;
+  confirmBtn.textContent = 'Importing...';
+  confirmBtn.disabled = true;
+
+  const result = await importFromCloud(shareCode);
+
+  if (result.success) {
+    // Refresh macros display if on dashboard
+    renderAll();
+    modal.remove();
+
+    // Show success notification
+    showShareImportSuccess(result.count, result.title);
+  } else {
+    confirmBtn.textContent = originalText;
+    confirmBtn.disabled = false;
+    const error = modal.querySelector('#share-import-error');
+    error.textContent = result.error || 'Import failed. Please try again.';
+    error.style.display = 'block';
+  }
+}
+
+function showShareImportSuccess(count, title) {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #065F46;
+    color: white;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  `;
+  notification.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <span>Imported ${count} macro(s)${title ? ` from "${title}"` : ''}!</span>
+  `;
+  document.body.appendChild(notification);
+  setTimeout(() => notification.remove(), 4000);
+}
+
 // Start when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   bindWebDashboardEvents();
   initWebDashboard();
+
+  // Check for share URL
+  handleShareUrl();
+
+  // Also handle hash changes (if user clicks a share link while on the page)
+  window.addEventListener('hashchange', handleShareUrl);
 });
