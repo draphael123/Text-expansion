@@ -176,27 +176,70 @@
       border: 1px solid var(--blue-50);
     }
 
-    .hero-counter {
+    /* Live Demo Styles */
+    .live-demo {
+      max-width: 600px;
+      margin: 0 auto 40px;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .live-demo-header {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 24px;
-      margin-bottom: 20px;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .live-demo-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .live-demo-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .live-demo-input {
+      width: 100%;
+      min-height: 100px;
+      padding: 16px;
+      border: none;
+      font-size: 15px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      background: var(--bg-alt);
+      color: var(--text);
+    }
+    .live-demo-input::placeholder {
+      color: var(--text-muted);
+    }
+    .live-demo-triggers {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
       flex-wrap: wrap;
     }
-    .hero-stat {
-      text-align: center;
-    }
-    .hero-stat-value {
-      font-size: 32px;
-      font-weight: 800;
+    .live-demo-trigger {
+      background: var(--blue-bg);
       color: var(--blue);
-      letter-spacing: -1px;
-    }
-    .hero-stat-label {
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
       font-size: 12px;
-      color: var(--text-muted);
-      font-weight: 500;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--blue-50);
+      transition: all 0.15s;
+    }
+    .live-demo-trigger:hover {
+      background: var(--blue);
+      color: white;
     }
 
     .hero h1 {
@@ -1085,17 +1128,7 @@
 
   <!-- Hero -->
   <section class="hero">
-    <div class="hero-badge">Free forever &middot; No account required</div>
-    <div class="hero-counter">
-      <div class="hero-stat">
-        <div class="hero-stat-value" id="expansion-count">0</div>
-        <div class="hero-stat-label">text expansions</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-value" id="time-saved">0h</div>
-        <div class="hero-stat-label">time saved</div>
-      </div>
-    </div>
+    <div class="hero-badge">Free account required &middot; Sync across devices</div>
     <h1>Type a shortcut.<br /><span class="accent">Get the full text.</span></h1>
     <p class="hero-sub">SnapText turns short triggers into complete text snippets. Smart variables, cross-device sync, and it works in every text field on the web.</p>
     <div class="hero-actions">
@@ -1159,17 +1192,21 @@
     </div>
   </section>
 
-  <!-- Demo -->
-  <section class="demo fade-up">
-    <div class="demo-window">
-      <div class="demo-titlebar">
-        <span class="demo-dot red"></span>
-        <span class="demo-dot yellow"></span>
-        <span class="demo-dot green"></span>
-        <span class="demo-label" id="demo-label">Compose email</span>
+  <!-- Live Interactive Demo -->
+  <section class="fade-up" style="max-width:720px;margin:0 auto;padding:32px 24px;">
+    <h2 style="text-align:center;font-size:24px;font-weight:800;margin-bottom:8px;">Try It Live</h2>
+    <p style="text-align:center;font-size:14px;color:var(--text-muted);margin-bottom:24px;">Type a trigger below and press Space to see the magic happen</p>
+    <div class="live-demo">
+      <div class="live-demo-header">
+        <span class="live-demo-title">Text Field</span>
+        <span class="live-demo-hint">Type ;sig, ;today, or ;hello then press Space</span>
       </div>
-      <div class="demo-content">
-        <div><span id="demo-text"></span><span class="demo-cursor"></span></div>
+      <textarea class="live-demo-input" id="live-demo-input" placeholder="Start typing here... Try ;sig followed by Space"></textarea>
+      <div class="live-demo-triggers">
+        <span class="live-demo-trigger" data-trigger=";sig">;sig</span>
+        <span class="live-demo-trigger" data-trigger=";today">;today</span>
+        <span class="live-demo-trigger" data-trigger=";hello">;hello</span>
+        <span class="live-demo-trigger" data-trigger=";email">;email</span>
       </div>
     </div>
   </section>
@@ -1689,108 +1726,77 @@
 
   <!-- Scripts -->
   <script>
-    // ── Live expansion counter ─────────────────────────────────────────
-    (function initCounter() {
-      const countEl = document.getElementById('expansion-count');
-      const timeEl = document.getElementById('time-saved');
-      if (!countEl || !timeEl) return;
+    // ── Live Interactive Demo ───────────────────────────────────────────
+    (function initLiveDemo() {
+      const demoInput = document.getElementById('live-demo-input');
+      const triggerBtns = document.querySelectorAll('.live-demo-trigger');
+      if (!demoInput) return;
 
-      // Get count from localStorage (simulated community total + local)
-      const baseCount = 127849; // Community base
-      const localCount = parseInt(localStorage.getItem('snaptext-expansions') || '0', 10);
-      const totalCount = baseCount + localCount;
+      // Demo macros
+      const demoMacros = {
+        ';sig': 'Best regards,\nDaniel Raphael\nSenior Developer',
+        ';today': new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        ';hello': 'Hello! How can I help you today?',
+        ';email': 'Hi [Name],\n\nThank you for reaching out. I wanted to follow up on our conversation.\n\nPlease let me know if you have any questions.\n\nBest regards,\nDaniel'
+      };
 
-      // Calculate time saved (avg 15 seconds per expansion)
-      function formatTime(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        if (hours >= 1) return `${hours.toLocaleString()}h`;
-        return `${mins}m`;
+      // Handle text expansion
+      function tryExpand() {
+        const text = demoInput.value;
+        const cursorPos = demoInput.selectionStart;
+
+        // Find trigger before cursor
+        for (const [trigger, expansion] of Object.entries(demoMacros)) {
+          const triggerPos = text.lastIndexOf(trigger, cursorPos);
+          if (triggerPos !== -1 && triggerPos + trigger.length === cursorPos) {
+            // Found a trigger right before cursor - expand it
+            const before = text.slice(0, triggerPos);
+            const after = text.slice(cursorPos);
+            demoInput.value = before + expansion + after;
+
+            // Position cursor after expansion
+            const newPos = triggerPos + expansion.length;
+            demoInput.setSelectionRange(newPos, newPos);
+
+            // Flash effect
+            demoInput.style.background = '#EFF6FF';
+            setTimeout(() => {
+              demoInput.style.background = '';
+            }, 300);
+
+            return true;
+          }
+        }
+        return false;
       }
 
-      // Animate counter
-      function animateValue(el, start, end, duration, formatter = (v) => v.toLocaleString()) {
-        const startTime = performance.now();
-        function update(currentTime) {
-          const elapsed = currentTime - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          // Ease out quad
-          const eased = 1 - (1 - progress) * (1 - progress);
-          const current = Math.floor(start + (end - start) * eased);
-          el.textContent = formatter(current);
-          if (progress < 1) requestAnimationFrame(update);
-        }
-        requestAnimationFrame(update);
-      }
-
-      // Start animation when visible
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) {
-          observer.disconnect();
-          animateValue(countEl, 0, totalCount, 1500);
-          animateValue(timeEl, 0, totalCount * 15, 1500, formatTime);
-        }
-      }, { threshold: 0.5 });
-      observer.observe(countEl);
-
-      // Listen for messages from extension
-      window.addEventListener('message', (e) => {
-        if (e.data?.type === 'snaptext-expansion') {
-          const newLocal = parseInt(localStorage.getItem('snaptext-expansions') || '0', 10) + 1;
-          localStorage.setItem('snaptext-expansions', newLocal.toString());
-          const newTotal = baseCount + newLocal;
-          countEl.textContent = newTotal.toLocaleString();
-          timeEl.textContent = formatTime(newTotal * 15);
+      // Listen for space/tab to trigger expansion
+      demoInput.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Tab') {
+          if (tryExpand()) {
+            e.preventDefault();
+            // Add space after expansion if space was pressed
+            if (e.key === ' ') {
+              const pos = demoInput.selectionStart;
+              demoInput.value = demoInput.value.slice(0, pos) + ' ' + demoInput.value.slice(pos);
+              demoInput.setSelectionRange(pos + 1, pos + 1);
+            }
+          }
         }
       });
+
+      // Click trigger buttons to insert them
+      triggerBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const trigger = btn.dataset.trigger;
+          demoInput.focus();
+          const pos = demoInput.selectionStart;
+          const text = demoInput.value;
+          demoInput.value = text.slice(0, pos) + trigger + text.slice(pos);
+          demoInput.setSelectionRange(pos + trigger.length, pos + trigger.length);
+        });
+      });
     })();
-
-    // ── Demo animation ──────────────────────────────────────────────────
-    const demos = [
-      { label: 'Compose email', typing: ';sig', result: 'Best regards,\nDaniel Raphael' },
-      { label: 'Quick note', typing: ';today', result: 'April 3, 2026' },
-      { label: 'Reply to client', typing: ';reply', result: 'Hi Sarah,\n\nThank you for reaching out.\n\nBest,\nDaniel' },
-      { label: 'Support ticket', typing: ';ack', result: 'Thanks for reporting this. I\'m looking into it now and will follow up within 24 hours.' },
-    ];
-
-    const demoText = document.getElementById('demo-text');
-    const demoLabel = document.getElementById('demo-label');
-    let demoIndex = 0;
-
-    async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-    async function runDemo() {
-      while (true) {
-        const d = demos[demoIndex % demos.length];
-        demoLabel.textContent = d.label;
-
-        // Type the trigger character by character
-        demoText.textContent = '';
-        demoText.style.color = '';
-        demoText.style.fontWeight = '';
-        for (let i = 0; i <= d.typing.length; i++) {
-          demoText.textContent = d.typing.slice(0, i);
-          await sleep(100);
-        }
-
-        await sleep(350);
-
-        // Flash expand
-        demoText.style.color = '#2563EB';
-        demoText.style.fontWeight = '600';
-        demoText.textContent = d.result;
-
-        await sleep(2800);
-
-        // Clear
-        demoText.style.color = '';
-        demoText.style.fontWeight = '';
-        demoText.textContent = '';
-        demoIndex++;
-
-        await sleep(500);
-      }
-    }
 
     // ── Scroll reveal ───────────────────────────────────────────────────
     const fadeEls = document.querySelectorAll('.fade-up');
@@ -1803,15 +1809,6 @@
     }, { threshold: 0.15 });
 
     fadeEls.forEach(el => revealObserver.observe(el));
-
-    // Start demo when demo section is visible
-    const demoObserver = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        demoObserver.disconnect();
-        runDemo();
-      }
-    });
-    demoObserver.observe(document.querySelector('.demo'));
 
     // ── Dark mode toggle ─────────────────────────────────────────────────
     (function initTheme() {
