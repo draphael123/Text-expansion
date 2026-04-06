@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Use Cases — SnapText</title>
+  <meta name="description" content="Discover how SnapText helps customer support, developers, sales teams, and writers save hours every week with text expansion." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#2563EB" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --blue: #2563EB;
+      --blue-light: #60A5FA;
+      --blue-dark: #1D4ED8;
+      --blue-bg: #EFF6FF;
+      --blue-50: #DBEAFE;
+      --bg: #FFFFFF;
+      --bg-alt: #F8FAFC;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+    }
+    [data-theme="dark"] {
+      --blue: #3B82F6;
+      --blue-bg: #1E293B;
+      --blue-50: #1E3A5F;
+      --bg: #0F172A;
+      --bg-alt: #1E293B;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --border: #334155;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+    .nav-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    [data-theme="dark"] .nav-wrap { background: rgba(15, 23, 42, 0.9); }
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 24px;
+    }
+    .nav-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--blue);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-logo svg { width: 28px; height: 28px; }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-links a {
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--blue); }
+    .container { max-width: 900px; margin: 0 auto; padding: 60px 24px; }
+    h1 {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 18px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 60px;
+    }
+    .use-case {
+      margin-bottom: 64px;
+      scroll-margin-top: 80px;
+    }
+    .use-case-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .use-case-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--blue-bg);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--blue);
+      flex-shrink: 0;
+    }
+    .use-case-icon svg { width: 28px; height: 28px; }
+    .use-case h2 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .use-case p {
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      font-size: 15px;
+    }
+    .examples {
+      display: grid;
+      gap: 16px;
+    }
+    .example {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .example-trigger {
+      display: inline-block;
+      background: var(--blue-bg);
+      color: var(--blue);
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+    .example-desc {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .example-expansion {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 12px;
+      white-space: pre-wrap;
+      border: 1px solid var(--border);
+    }
+    .cta-section {
+      text-align: center;
+      background: var(--blue-bg);
+      border-radius: 16px;
+      padding: 48px 24px;
+      margin-top: 40px;
+    }
+    .cta-section h3 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .cta-section p {
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: var(--blue-dark); }
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+    @media (max-width: 768px) {
+      h1 { font-size: 36px; }
+      .use-case h2 { font-size: 22px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav>
+      <a class="nav-logo" href="index.html">
+        <svg viewBox="0 0 28 28" fill="none">
+          <rect width="28" height="28" rx="6" fill="#2563EB"/>
+          <path d="M15.5 6L10 15h4.5L12.5 22L18 13h-4.5L15.5 6z" fill="white"/>
+        </svg>
+        SnapText
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="use-cases.html" class="active">Use Cases</a>
+        <a href="docs.html">Docs</a>
+        <a href="changelog.html">Changelog</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="container">
+    <h1>Use Cases</h1>
+    <p class="subtitle">Discover how teams and individuals use SnapText to save hours every week.</p>
+
+    <div class="use-case" id="support">
+      <div class="use-case-header">
+        <div class="use-case-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h2>Customer Support</h2>
+      </div>
+      <p>Support teams handle hundreds of tickets daily. SnapText lets agents respond instantly with professional, consistent messages while personalizing each response with dynamic variables.</p>
+      <div class="examples">
+        <div class="example">
+          <span class="example-trigger">;ack</span>
+          <div class="example-desc">Acknowledge a support ticket</div>
+          <div class="example-expansion">Hi {{input:Customer Name}},
+
+Thank you for reaching out to support. I've received your request and will look into this right away.
+
+I'll follow up with an update within {{select:1 hour,2 hours,24 hours}}.
+
+Best regards,
+{{input:Your Name}}</div>
+        </div>
+        <div class="example">
+          <span class="example-trigger">;refund</span>
+          <div class="example-desc">Process a refund request</div>
+          <div class="example-expansion">Hi {{input:Customer Name}},
+
+I've processed your refund request. You should see the amount credited back to your account within 5-7 business days.
+
+Reference number: {{input:Ref #}}
+
+Is there anything else I can help you with?
+
+Best,
+{{input:Your Name}}</div>
+        </div>
+        <div class="example">
+          <span class="example-trigger">;escalate</span>
+          <div class="example-desc">Escalate to senior support</div>
+          <div class="example-expansion">Hi {{input:Customer Name}},
+
+I've escalated your case to our senior support team for further review. A specialist will reach out to you within 24 hours.
+
+Your escalation reference: ESC-{{date}}-{{random:1234,5678,9012}}
+
+Thank you for your patience.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="use-case" id="developers">
+      <div class="use-case-header">
+        <div class="use-case-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h2>Developers</h2>
+      </div>
+      <p>Stop retyping boilerplate code, git commands, and documentation. SnapText stores your common snippets and inserts them with a few keystrokes.</p>
+      <div class="examples">
+        <div class="example">
+          <span class="example-trigger">;gitpr</span>
+          <div class="example-desc">Create a pull request description</div>
+          <div class="example-expansion">## Summary
+{{input:Brief description}}
+
+## Changes
+- {{input:Change 1}}
+- {{input:Change 2}}
+
+## Testing
+- [ ] Unit tests pass
+- [ ] Manual testing completed
+
+## Screenshots
+{{input:Add screenshots if applicable}}</div>
+        </div>
+        <div class="example">
+          <span class="example-trigger">;func</span>
+          <div class="example-desc">JavaScript function template</div>
+          <div class="example-expansion">/**
+ * {{input:Description}}
+ * @param {{{input:type}}} {{input:param}} - {{input:param description}}
+ * @returns {{{input:return type}}}
+ */
+function {{input:functionName}}({{input:params}}) {
+  {{cursor}}
+}</div>
+        </div>
+        <div class="example">
+          <span class="example-trigger">;debug</span>
+          <div class="example-desc">Quick debug statement</div>
+          <div class="example-expansion">console.log('[DEBUG {{date}} {{time}}]', {
+  location: '{{input:file/function}}',
+  data: {{input:variable}}
+});</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="use-case" id="sales">
+      <div class="use-case-header">
+        <div class="use-case-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h2>Sales Teams</h2>
+      </div>
+      <p>Close more deals faster with instant outreach templates. Personalize every message while maintaining consistent messaging across your entire team.</p>
+      <div class="examples">
+        <div class="example">
+          <span class="example-trigger">;outreach</span>
+          <div class="example-desc">Initial cold outreach email</div>
+          <div class="example-expansion">Hi {{input:First Name}},
+
+I noticed that {{input:Company}} is {{input:recent achievement/news}}. Congratulations!
+
+I'm reaching out because companies like yours often struggle with {{input:pain point}}, and I thought you'd be interested in how we've helped similar businesses achieve {{input:result}}.
+
+Would you be open to a quick 15-minute call this week?
+
+Best,
+{{input:Your Name}}</div>
+        </div>
+        <div class="example">
+          <span class="example-trigger">;followup</span>
+          <div class="example-desc">Follow-up after no response</div>
+          <div class="example-expansion">Hi {{input:First Name}},
+
+I wanted to follow up on my previous email about {{input:topic}}. I understand you're busy, so I'll keep this brief.
+
+{{select:Would a different time work better for a call?,Would it help if I sent over some case studies?,Should I connect with someone else on your team?}}
+
+Either way, I'd love to hear from you.
+
+Best,
+{{input:Your Name}}</div>
+        </div>
+        <div class="example">
+          <span class="example-trigger">;proposal</span>
+          <div class="example-desc">Send proposal follow-up</div>
+          <div class="example-expansion">Hi {{input:First Name}},
+
+Thank you for the great conversation on {{input:meeting date}}. As promised, I've attached our proposal for {{input:Company}}.
+
+Highlights:
+- {{input:Key benefit 1}}
+- {{input:Key benefit 2}}
+- Investment: {{input:Price}}
+
+I'm available to discuss any questions. When would be a good time for a follow-up call?
+
+Best,
+{{input:Your Name}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="use-case" id="writers">
+      <div class="use-case-header">
+        <div class="use-case-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+        </div>
+        <h2>Writers & Content Creators</h2>
+      </div>
+      <p>Speed up your writing workflow with common phrases, formatting templates, and content structures. Focus on creativity, not repetitive typing.</p>
+      <div class="examples">
+        <div class="example">
+          <span class="example-trigger">;blog</span>
+          <div class="example-desc">Blog post template</div>
+          <div class="example-expansion"># {{input:Title}}
+
+*Published on {{date}} by {{input:Author}}*
+
+## Introduction
+{{input:Hook/opening paragraph}}
+
+## {{input:Section 1 Title}}
+{{cursor}}
+
+## {{input:Section 2 Title}}
+
+## Conclusion
+
+---
+*{{input:Call to action}}*</div>
+        </div>
+        <div class="example">
+          <span class="example-trigger">;em</span>
+          <div class="example-desc">Em dash (—)</div>
+          <div class="example-expansion">—</div>
+        </div>
+        <div class="example">
+          <span class="example-trigger">;sig</span>
+          <div class="example-desc">Email signature</div>
+          <div class="example-expansion">Best regards,
+{{input:Your Name}}
+
+{{input:Title}} | {{input:Company}}
+{{input:Phone}} | {{input:Email}}
+{{input:Website}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <h3>Ready to save hours every week?</h3>
+      <p>Join thousands of users who've transformed their workflow with SnapText.</p>
+      <a href="downloads/snaptext-extension-v2.0.3.zip" class="btn-primary" download>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download SnapText Free
+      </a>
+    </div>
+  </div>
+
+  <footer>
+    <p>SnapText &copy; 2026 &middot; <a href="index.html">Home</a> &middot; <a href="docs.html">Docs</a> &middot; <a href="changelog.html">Changelog</a> &middot; <a href="https://github.com/draphael123/Text-expansion" target="_blank">GitHub</a></p>
+  </footer>
+
+  <script>
+    // Theme persistence
+    const savedTheme = localStorage.getItem('snaptext-theme');
+    if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.setAttribute('data-theme', 'dark');
+  </script>
+</body>
+</html>

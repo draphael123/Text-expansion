@@ -8,7 +8,7 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 // ── Init ────────────────────────────────────────────────────────────
 async function init() {
-  const data = await chrome.storage.local.get(['macros', 'session', 'settings', 'stats', 'charsSaved', 'conflicts', 'folders']);
+  const data = await chrome.storage.local.get(['macros', 'session', 'settings', 'stats', 'charsSaved', 'conflicts', 'folders', 'isOnline']);
   macros = data.macros || [];
   renderAll();
   renderStats(data.stats || {}, data.charsSaved || 0);
@@ -17,9 +17,25 @@ async function init() {
   showConflicts(data.conflicts || []);
   populateShareFolders();
   updateFolderDatalist();
+  updateOfflineStatus(data.isOnline !== false);
 
   if (new URLSearchParams(location.search).get('add') === 'true') openMacroModal();
 }
+
+// ── Offline indicator ───────────────────────────────────────────────
+function updateOfflineStatus(isOnline) {
+  const banner = $('#offline-banner');
+  if (banner) {
+    banner.style.display = isOnline ? 'none' : 'flex';
+  }
+}
+
+// Listen for connectivity changes from background
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === 'CONNECTIVITY_CHANGED') {
+    updateOfflineStatus(msg.isOnline);
+  }
+});
 
 function showConflicts(conflicts) {
   if (conflicts.length > 0) {
@@ -212,6 +228,8 @@ function openMacroModal(id) {
     $('#macro-trigger').value = m.trigger;
     $('#macro-body').value = m.body;
     $('#macro-folder').value = m.folder || '';
+    $('#macro-abbreviation').checked = m.isAbbreviation || false;
+    if ($('#macro-richtext')) $('#macro-richtext').checked = m.richText || false;
     $('#modal-delete').style.display = 'inline-flex';
     updatePreview();
   } else {
@@ -219,6 +237,8 @@ function openMacroModal(id) {
     $('#macro-trigger').value = '';
     $('#macro-body').value = '';
     $('#macro-folder').value = currentFolder || '';
+    $('#macro-abbreviation').checked = false;
+    if ($('#macro-richtext')) $('#macro-richtext').checked = false;
     $('#modal-delete').style.display = 'none';
     $('#macro-preview').textContent = 'Type in the body above to see a preview...';
   }
@@ -233,8 +253,33 @@ function updatePreview() {
   const body = $('#macro-body').value;
   if (!body) { $('#macro-preview').textContent = 'Type in the body above to see a preview...'; return; }
   let preview = body
+    // Text wrappers
+    .replace(/\{\{uppercase\}\}([\s\S]*?)\{\{\/uppercase\}\}/gi, (_, inner) => inner.toUpperCase())
+    .replace(/\{\{lowercase\}\}([\s\S]*?)\{\{\/lowercase\}\}/gi, (_, inner) => inner.toLowerCase())
+    // Simple variables
     .replace(/\{\{date\}\}/gi, new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))
     .replace(/\{\{time\}\}/gi, new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }))
+    // Relative dates
+    .replace(/\{\{date([+-])(\d+)\}\}/gi, (_, op, days) => {
+      const d = new Date();
+      d.setDate(d.getDate() + (op === '+' ? parseInt(days, 10) : -parseInt(days, 10)));
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    })
+    // Random selection (show first option in preview)
+    .replace(/\{\{random:([^}]+)\}\}/gi, (_, items) => {
+      const options = items.split(',').map(s => s.trim()).filter(s => s);
+      return options.length > 0 ? `[random: ${options[0]}]` : '[random]';
+    })
+    // Math expressions
+    .replace(/\{\{calc:([^}]+)\}\}/gi, (_, expr) => {
+      if (!/^[\d\s+\-*/().]+$/.test(expr)) return '[invalid calc]';
+      try { return Function('"use strict"; return (' + expr + ')')(); } catch { return '[calc error]'; }
+    })
+    // Select dropdown (show options in preview)
+    .replace(/\{\{select:([^}]+)\}\}/gi, (_, items) => {
+      const options = items.split(',').map(s => s.trim()).filter(s => s);
+      return options.length > 0 ? `[select: ${options.join('/')}]` : '[select]';
+    })
     .replace(/\{\{clipboard\}\}/gi, '[clipboard]')
     .replace(/\{\{cursor\}\}/gi, '|')
     .replace(/\{\{input:([^}]+)\}\}/gi, '[$1]')
@@ -257,16 +302,18 @@ function saveMacro() {
   const trigger = $('#macro-trigger').value.trim().replace(/^;/, '');
   const body = $('#macro-body').value;
   const folder = $('#macro-folder').value.trim() || 'General';
+  const isAbbreviation = $('#macro-abbreviation').checked;
+  const richText = $('#macro-richtext') ? $('#macro-richtext').checked : false;
   if (!trigger || !body) return alert('Trigger and body are required.');
   if (checkDuplicate()) return alert('A macro with this trigger already exists.');
 
   if (editingMacroId) {
     const m = macros.find(x => x.id === editingMacroId);
-    if (m) { m.trigger = trigger; m.body = body; m.folder = folder; m.updatedAt = Date.now(); }
+    if (m) { m.trigger = trigger; m.body = body; m.folder = folder; m.isAbbreviation = isAbbreviation; m.richText = richText; m.updatedAt = Date.now(); }
   } else {
     macros.push({
       id: 'macro-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-      trigger, body, folder, enabled: true, useCount: 0,
+      trigger, body, folder, isAbbreviation, richText, enabled: true, useCount: 0,
       createdAt: Date.now(), updatedAt: Date.now()
     });
   }
@@ -575,11 +622,65 @@ async function syncNow() {
 }
 
 // ── Settings ────────────────────────────────────────────────────────
+let currentShortcut = { ctrlKey: true, shiftKey: true, code: 'Space' };
+let recordingShortcut = false;
+
 function loadSettings(settings) {
   if (!settings) return;
   $('#set-trigger').value = settings.triggerChar || ';';
   $('#set-sync').checked = settings.syncEnabled || false;
+  $('#set-autosuggest').checked = settings.autoSuggestEnabled !== false;
+  currentShortcut = settings.searchShortcut || { ctrlKey: true, shiftKey: true, code: 'Space' };
+  $('#set-shortcut-display').value = formatShortcut(currentShortcut);
   renderBlockedDomains(settings.blockedDomains || []);
+}
+
+function formatShortcut(s) {
+  const parts = [];
+  if (s.ctrlKey) parts.push('Ctrl');
+  if (s.altKey) parts.push('Alt');
+  if (s.shiftKey) parts.push('Shift');
+  if (s.metaKey) parts.push('Meta');
+  // Convert code to readable name
+  let keyName = s.code || '';
+  if (keyName.startsWith('Key')) keyName = keyName.slice(3);
+  else if (keyName.startsWith('Digit')) keyName = keyName.slice(5);
+  else if (keyName === 'Space') keyName = 'Space';
+  parts.push(keyName);
+  return parts.join('+');
+}
+
+function startRecordingShortcut() {
+  recordingShortcut = true;
+  const input = $('#set-shortcut-display');
+  input.value = 'Press keys...';
+  input.style.background = '#FEF3C7';
+  $('#btn-record-shortcut').textContent = 'Recording...';
+}
+
+function stopRecordingShortcut(e) {
+  if (!recordingShortcut) return;
+  if (e.key === 'Escape') {
+    recordingShortcut = false;
+    $('#set-shortcut-display').value = formatShortcut(currentShortcut);
+    $('#set-shortcut-display').style.background = 'var(--bg-alt)';
+    $('#btn-record-shortcut').textContent = 'Record';
+    return;
+  }
+  if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return; // Wait for actual key
+
+  e.preventDefault();
+  currentShortcut = {
+    ctrlKey: e.ctrlKey,
+    shiftKey: e.shiftKey,
+    altKey: e.altKey,
+    metaKey: e.metaKey,
+    code: e.code
+  };
+  recordingShortcut = false;
+  $('#set-shortcut-display').value = formatShortcut(currentShortcut);
+  $('#set-shortcut-display').style.background = 'var(--bg-alt)';
+  $('#btn-record-shortcut').textContent = 'Record';
 }
 
 function renderBlockedDomains(domains) {
@@ -616,7 +717,9 @@ async function saveSettings() {
   const settings = {
     ...existing,
     triggerChar: $('#set-trigger').value || ';',
-    syncEnabled: $('#set-sync').checked
+    syncEnabled: $('#set-sync').checked,
+    autoSuggestEnabled: $('#set-autosuggest').checked,
+    searchShortcut: currentShortcut
   };
   await chrome.storage.local.set({ settings });
   alert('Settings saved!');
@@ -711,6 +814,10 @@ $('#btn-signup').addEventListener('click', signUp);
 $('#btn-signout').addEventListener('click', signOut);
 $('#btn-sync-now').addEventListener('click', syncNow);
 $('#btn-save-settings').addEventListener('click', saveSettings);
+
+// Shortcut recording
+$('#btn-record-shortcut').addEventListener('click', startRecordingShortcut);
+document.addEventListener('keydown', stopRecordingShortcut);
 
 // Blocked domains
 $('#btn-add-domain').addEventListener('click', addBlockedDomain);

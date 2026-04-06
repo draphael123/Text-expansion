@@ -19,7 +19,11 @@
   let macros = [];
   let settings = {};
   let blockedDomains = [];
+  let triggerChar = ';';
+  let searchShortcut = { ctrlKey: true, shiftKey: true, code: 'Space' };
+  let autoSuggestEnabled = true;
   let searchOverlay = null;
+  let autoSuggestPopup = null;
   let lastExpansion = null; // for undo
 
   // ── Load from storage ─────────────────────────────────────────────────
@@ -28,6 +32,9 @@
       macros = result.macros || [];
       settings = result.settings || {};
       blockedDomains = (settings.blockedDomains || []).map(d => d.toLowerCase().trim());
+      triggerChar = settings.triggerChar || ';';
+      searchShortcut = settings.searchShortcut || { ctrlKey: true, shiftKey: true, code: 'Space' };
+      autoSuggestEnabled = settings.autoSuggestEnabled !== false;
     });
   }
 
@@ -37,6 +44,9 @@
       if (changes.settings) {
         settings = changes.settings.newValue || {};
         blockedDomains = (settings.blockedDomains || []).map(d => d.toLowerCase().trim());
+        triggerChar = settings.triggerChar || ';';
+        searchShortcut = settings.searchShortcut || { ctrlKey: true, shiftKey: true, code: 'Space' };
+        autoSuggestEnabled = settings.autoSuggestEnabled !== false;
       }
     }
   });
@@ -97,6 +107,35 @@
     catch { return '[clipboard unavailable]'; }
   }
 
+  // Get relative date (e.g., +7 days, -1 day)
+  function getRelativeDate(offset) {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return d.toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+
+  // Safe math expression evaluator (no eval)
+  function safeCalc(expr) {
+    // Only allow numbers, operators, parentheses, decimal points, spaces
+    if (!/^[\d\s+\-*/().]+$/.test(expr)) return '[invalid expression]';
+    try {
+      // Use Function constructor with strict mode for safer evaluation
+      const result = Function('"use strict"; return (' + expr + ')')();
+      if (typeof result !== 'number' || !isFinite(result)) return '[calc error]';
+      // Round to avoid floating point issues
+      return Math.round(result * 1000000) / 1000000;
+    } catch { return '[calc error]'; }
+  }
+
+  // Get random item from comma-separated list
+  function getRandomItem(items) {
+    const options = items.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    if (options.length === 0) return '';
+    return options[Math.floor(Math.random() * options.length)];
+  }
+
   // Resolve nested {{macro:name}} references (max depth 5)
   function resolveNestedMacros(text, depth = 0) {
     if (depth > 5) return text;
@@ -113,16 +152,50 @@
     // Step 1: resolve nested macros
     let result = resolveNestedMacros(text);
 
-    // Step 2: simple variables
+    // Step 2: text wrappers (process early, before other replacements)
+    result = result.replace(/\{\{uppercase\}\}([\s\S]*?)\{\{\/uppercase\}\}/gi, (_, inner) => inner.toUpperCase());
+    result = result.replace(/\{\{lowercase\}\}([\s\S]*?)\{\{\/lowercase\}\}/gi, (_, inner) => inner.toLowerCase());
+
+    // Step 3: simple variables
     result = result.replace(/\{\{date\}\}/gi, getFormattedDate());
     result = result.replace(/\{\{time\}\}/gi, getFormattedTime());
 
+    // Step 4: relative dates {{date+N}} or {{date-N}}
+    result = result.replace(/\{\{date([+-])(\d+)\}\}/gi, (_, op, days) => {
+      const offset = op === '+' ? parseInt(days, 10) : -parseInt(days, 10);
+      return getRelativeDate(offset);
+    });
+
+    // Step 5: random selection {{random:item1,item2,item3}}
+    result = result.replace(/\{\{random:([^}]+)\}\}/gi, (_, items) => getRandomItem(items));
+
+    // Step 6: math expressions {{calc:expression}}
+    result = result.replace(/\{\{calc:([^}]+)\}\}/gi, (_, expr) => safeCalc(expr));
+
+    // Step 7: clipboard
     if (/\{\{clipboard\}\}/i.test(result)) {
       const clip = await getClipboard();
       result = result.replace(/\{\{clipboard\}\}/gi, clip);
     }
 
-    // Step 3: collect all {{input:Label}} prompts
+    // Step 8: collect all {{select:options}} prompts
+    const selectRegex = /\{\{select:([^}]+)\}\}/gi;
+    let selectMatch;
+    const selectPrompts = [];
+    while ((selectMatch = selectRegex.exec(result)) !== null) {
+      const options = selectMatch[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
+      if (!selectPrompts.find(p => p.raw === selectMatch[0])) {
+        selectPrompts.push({ raw: selectMatch[0], options });
+      }
+    }
+
+    // Show select dropdowns one at a time
+    for (const sp of selectPrompts) {
+      const selected = await showSelectPrompt(sp.options);
+      result = result.replace(sp.raw, selected);
+    }
+
+    // Step 9: collect all {{input:Label}} prompts
     const inputRegex = /\{\{input:([^}]+)\}\}/gi;
     let match;
     const prompts = [];
@@ -250,6 +323,43 @@
     });
   }
 
+  // ── Dropdown select prompt ───────────────────────────────────────────
+  function showSelectPrompt(options) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'snaptext-overlay';
+
+      const optionsHtml = options.map((opt, i) =>
+        `<option value="${escapeHtml(opt)}"${i === 0 ? ' selected' : ''}>${escapeHtml(opt)}</option>`
+      ).join('');
+
+      overlay.innerHTML = `
+        <div class="snaptext-prompt">
+          <div class="snaptext-prompt-label">Choose an option</div>
+          <select class="snaptext-select-input">${optionsHtml}</select>
+          <div class="snaptext-prompt-actions">
+            <button class="snaptext-btn snaptext-btn-cancel">Cancel</button>
+            <button class="snaptext-btn snaptext-btn-ok">OK</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      const select = overlay.querySelector('.snaptext-select-input');
+      const btnOk = overlay.querySelector('.snaptext-btn-ok');
+      const btnCancel = overlay.querySelector('.snaptext-btn-cancel');
+
+      function cleanup(v) { overlay.remove(); resolve(v); }
+      btnOk.addEventListener('click', () => cleanup(select.value));
+      btnCancel.addEventListener('click', () => cleanup(''));
+      select.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') cleanup(select.value);
+        if (e.key === 'Escape') cleanup('');
+      });
+      requestAnimationFrame(() => select.focus());
+    });
+  }
+
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
@@ -324,35 +434,68 @@
   }
 
   // ── Undo-friendly text insertion ──────────────────────────────────────
-  // Uses execCommand('insertText') for <input>/<textarea> so Ctrl+Z works.
-  // For contenteditable, uses insertHTML for rich text support.
+  // Uses modern APIs with execCommand fallback for undo support
   function insertTextUndoable(el, newFullText, caretPos, isRichText, richHtml) {
     if (el.isContentEditable && isRichText && richHtml) {
-      // Rich text path: select all content, then insertHTML
+      // Rich text path for contenteditable
       const sel = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(el);
       sel.removeAllRanges();
       sel.addRange(range);
-      document.execCommand('insertHTML', false, richHtml);
-      // Position cursor
+
+      // Try modern insertHTML via execCommand (still best for undo in contenteditable)
+      if (document.execCommand('insertHTML', false, richHtml)) {
+        if (caretPos >= 0) setCaretPosition(el, caretPos);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+
+      // Fallback: direct DOM manipulation (no undo support)
+      el.innerHTML = richHtml;
       if (caretPos >= 0) setCaretPosition(el, caretPos);
       el.dispatchEvent(new Event('input', { bubbles: true }));
     } else if (!el.isContentEditable) {
-      // Standard input/textarea: select all, insertText (undo-friendly)
+      // Standard input/textarea
       el.focus();
       el.setSelectionRange(0, el.value.length);
-      document.execCommand('insertText', false, newFullText);
-      if (caretPos >= 0) el.setSelectionRange(caretPos, caretPos);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // Try execCommand first (best undo support)
+      if (document.execCommand('insertText', false, newFullText)) {
+        if (caretPos >= 0) el.setSelectionRange(caretPos, caretPos);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+
+      // Modern fallback using setRangeText (preserves some undo in some browsers)
+      try {
+        el.setRangeText(newFullText, 0, el.value.length, 'end');
+        if (caretPos >= 0) el.setSelectionRange(caretPos, caretPos);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      } catch (e) {
+        // Final fallback: direct value assignment (no undo)
+        el.value = newFullText;
+        if (caretPos >= 0) el.setSelectionRange(caretPos, caretPos);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     } else {
-      // contenteditable plain text fallback
+      // contenteditable plain text
       const sel = window.getSelection();
       const range = document.createRange();
       range.selectNodeContents(el);
       sel.removeAllRanges();
       sel.addRange(range);
-      document.execCommand('insertText', false, newFullText);
+
+      // Try execCommand first
+      if (document.execCommand('insertText', false, newFullText)) {
+        if (caretPos >= 0) setCaretPosition(el, caretPos);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+
+      // Fallback: direct text assignment
+      el.textContent = newFullText;
       if (caretPos >= 0) setCaretPosition(el, caretPos);
       el.dispatchEvent(new Event('input', { bubbles: true }));
     }
@@ -361,6 +504,30 @@
   // Convert plain text to simple HTML (preserves line breaks)
   function textToHtml(text) {
     return escapeHtml(text).replace(/\n/g, '<br>');
+  }
+
+  // Convert markdown-like syntax to HTML for rich text macros
+  function markdownToHtml(text) {
+    let html = escapeHtml(text);
+
+    // Bold: **text** or __text__
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+    // Italic: *text* or _text_ (but not if preceded by a letter)
+    html = html.replace(/(?<![a-zA-Z])\*([^*]+)\*/g, '<em>$1</em>');
+    html = html.replace(/(?<![a-zA-Z])_([^_]+)_(?![a-zA-Z])/g, '<em>$1</em>');
+
+    // Links: [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+    // Code: `text`
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+
+    return html;
   }
 
   // ── Usage tracking ────────────────────────────────────────────────────
@@ -394,18 +561,40 @@
 
     const text = getTextContent(el);
     const caret = getCaretPosition(el);
-
     const textBeforeCaret = text.substring(0, caret);
-    const triggerMatch = textBeforeCaret.match(/;([a-zA-Z0-9_.-]+)$/);
-    if (!triggerMatch) return false;
 
-    const triggerName = triggerMatch[1].toLowerCase();
-    const macro = macros.find(
-      (m) => m.trigger.toLowerCase() === triggerName && m.enabled !== false
-    );
+    // Build dynamic regex for trigger character
+    const escapedTrigger = escapeRegex(triggerChar);
+    const triggerRegex = new RegExp(escapedTrigger + '([a-zA-Z0-9_.-]+)$');
+    const triggerMatch = textBeforeCaret.match(triggerRegex);
+
+    let macro = null;
+    let triggerStart = 0;
+
+    if (triggerMatch) {
+      // Standard trigger match (;trigger)
+      const triggerName = triggerMatch[1].toLowerCase();
+      macro = macros.find(
+        (m) => m.trigger.toLowerCase() === triggerName && m.enabled !== false && !m.isAbbreviation
+      );
+      triggerStart = caret - triggerMatch[0].length;
+    }
+
+    // Check for abbreviation mode macros (no trigger prefix)
+    if (!macro) {
+      const abbreviations = macros.filter(m => m.isAbbreviation && m.enabled !== false);
+      for (const abbr of abbreviations) {
+        const abbrTrigger = abbr.trigger.toLowerCase();
+        if (textBeforeCaret.toLowerCase().endsWith(abbrTrigger)) {
+          macro = abbr;
+          triggerStart = caret - abbr.trigger.length;
+          break;
+        }
+      }
+    }
+
     if (!macro) return false;
 
-    const triggerStart = caret - triggerMatch[0].length;
     const { text: expanded, cursorOffset } = await processVariables(macro.body);
 
     const before = text.substring(0, triggerStart);
@@ -430,7 +619,8 @@
 
     // Determine if we should use rich text
     const useRichText = el.isContentEditable;
-    const richHtml = useRichText ? (before ? textToHtml(before) : '') + textToHtml(expanded) + (after ? textToHtml(after) : '') : null;
+    const htmlConverter = macro.richText ? markdownToHtml : textToHtml;
+    const richHtml = useRichText ? (before ? textToHtml(before) : '') + htmlConverter(expanded) + (after ? textToHtml(after) : '') : null;
 
     insertTextUndoable(el, newText, newCaret, useRichText, richHtml);
     trackUsage(macro);
@@ -495,9 +685,11 @@
         // Truncate body for preview
         const bodyPreview = m.body.length > 80 ? m.body.substring(0, 80) + '...' : m.body;
         const isCtxMatch = ctx && (m.folder || '').toLowerCase().includes(ctx.toLowerCase());
+        // Show trigger with prefix (or just trigger for abbreviations)
+        const triggerDisplay = m.isAbbreviation ? escapeHtml(m.trigger) : escapeHtml(triggerChar) + escapeHtml(m.trigger);
         return `
         <div class="snaptext-search-item ${i === selectedIndex ? 'selected' : ''}" data-index="${i}">
-          <span class="snaptext-search-trigger">;${escapeHtml(m.trigger)}</span>
+          <span class="snaptext-search-trigger">${triggerDisplay}</span>
           <span class="snaptext-search-body">${escapeHtml(bodyPreview)}</span>
           <span class="snaptext-search-folder ${isCtxMatch ? 'snaptext-ctx-match' : ''}">${escapeHtml(m.folder || '')}</span>
         </div>`;
@@ -522,8 +714,9 @@
         const newCaret = cursorOffset >= 0 ? caret + cursorOffset : caret + text.length;
 
         const useRichText = targetEl.isContentEditable;
+        const htmlConverter = macro.richText ? markdownToHtml : textToHtml;
         const richHtml = useRichText
-          ? (current.substring(0, caret) ? textToHtml(current.substring(0, caret)) : '') + textToHtml(text) + (current.substring(caret) ? textToHtml(current.substring(caret)) : '')
+          ? (current.substring(0, caret) ? textToHtml(current.substring(0, caret)) : '') + htmlConverter(text) + (current.substring(caret) ? textToHtml(current.substring(caret)) : '')
           : null;
 
         insertTextUndoable(targetEl, newText, newCaret, useRichText, richHtml);
@@ -582,10 +775,20 @@
     }
   }
 
+  // ── Check if keyboard shortcut matches ───────────────────────────────
+  function matchesSearchShortcut(e) {
+    const s = searchShortcut;
+    return (!!s.ctrlKey === e.ctrlKey) &&
+           (!!s.shiftKey === e.shiftKey) &&
+           (!!s.altKey === e.altKey) &&
+           (!!s.metaKey === e.metaKey) &&
+           (s.code === e.code);
+  }
+
   // ── Event listeners ───────────────────────────────────────────────────
   document.addEventListener('keydown', async (e) => {
-    // Ctrl+Shift+Space → search overlay
-    if (e.ctrlKey && e.shiftKey && e.code === 'Space') {
+    // Customizable search overlay shortcut (default: Ctrl+Shift+Space)
+    if (matchesSearchShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
       searchOverlay ? closeSearchOverlay() : openSearchOverlay();
@@ -606,6 +809,152 @@
       }
     }
   }, true);
+
+  // ── Auto-suggest popup ────────────────────────────────────────────────
+  let autoSuggestIndex = 0;
+  let autoSuggestMatches = [];
+  let autoSuggestAnchorEl = null;
+
+  function showAutoSuggest(el, matches) {
+    if (!autoSuggestEnabled || matches.length === 0) return;
+    closeAutoSuggest();
+
+    autoSuggestMatches = matches;
+    autoSuggestIndex = 0;
+    autoSuggestAnchorEl = el;
+
+    const popup = document.createElement('div');
+    popup.className = 'snaptext-autosuggest';
+    popup.innerHTML = matches.slice(0, 6).map((m, i) => {
+      const triggerDisplay = m.isAbbreviation ? escapeHtml(m.trigger) : escapeHtml(triggerChar) + escapeHtml(m.trigger);
+      const bodyPreview = m.body.length > 40 ? m.body.substring(0, 40) + '...' : m.body;
+      return `<div class="snaptext-autosuggest-item ${i === 0 ? 'selected' : ''}" data-index="${i}">
+        <span class="snaptext-autosuggest-trigger">${triggerDisplay}</span>
+        <span class="snaptext-autosuggest-body">${escapeHtml(bodyPreview)}</span>
+      </div>`;
+    }).join('');
+
+    // Position near cursor
+    const rect = el.getBoundingClientRect();
+    popup.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    popup.style.left = (rect.left + window.scrollX) + 'px';
+
+    document.body.appendChild(popup);
+    autoSuggestPopup = popup;
+
+    // Click handlers
+    popup.querySelectorAll('.snaptext-autosuggest-item').forEach(item => {
+      item.addEventListener('click', () => {
+        selectAutoSuggest(parseInt(item.dataset.index));
+      });
+    });
+  }
+
+  function closeAutoSuggest() {
+    if (autoSuggestPopup) {
+      autoSuggestPopup.remove();
+      autoSuggestPopup = null;
+    }
+    autoSuggestMatches = [];
+    autoSuggestIndex = 0;
+  }
+
+  function updateAutoSuggestSelection() {
+    if (!autoSuggestPopup) return;
+    autoSuggestPopup.querySelectorAll('.snaptext-autosuggest-item').forEach((item, i) => {
+      item.classList.toggle('selected', i === autoSuggestIndex);
+    });
+  }
+
+  async function selectAutoSuggest(index) {
+    const macro = autoSuggestMatches[index];
+    if (!macro || !autoSuggestAnchorEl) return;
+
+    const el = autoSuggestAnchorEl;
+    const text = getTextContent(el);
+    const caret = getCaretPosition(el);
+    const textBeforeCaret = text.substring(0, caret);
+
+    // Find the trigger position to replace
+    const escapedTrigger = escapeRegex(triggerChar);
+    const triggerRegex = new RegExp(escapedTrigger + '[a-zA-Z0-9_.-]*$');
+    const match = textBeforeCaret.match(triggerRegex);
+    const triggerStart = match ? caret - match[0].length : caret;
+
+    const { text: expanded, cursorOffset } = await processVariables(macro.body);
+    const before = text.substring(0, triggerStart);
+    const after = text.substring(caret);
+    const newText = before + expanded + after;
+    const newCaret = cursorOffset >= 0 ? triggerStart + cursorOffset : triggerStart + expanded.length;
+
+    const useRichText = el.isContentEditable;
+    const htmlConverter = macro.richText ? markdownToHtml : textToHtml;
+    const richHtml = useRichText ? (before ? textToHtml(before) : '') + htmlConverter(expanded) + (after ? textToHtml(after) : '') : null;
+
+    closeAutoSuggest();
+    insertTextUndoable(el, newText, newCaret, useRichText, richHtml);
+    trackUsage(macro);
+  }
+
+  // Listen for input to show auto-suggest
+  document.addEventListener('input', (e) => {
+    if (!autoSuggestEnabled) return;
+    const el = e.target;
+    if (!isTextInput(el)) return;
+
+    const text = getTextContent(el);
+    const caret = getCaretPosition(el);
+    const textBeforeCaret = text.substring(0, caret);
+
+    // Check if user is typing after trigger character
+    const escapedTrigger = escapeRegex(triggerChar);
+    const triggerRegex = new RegExp(escapedTrigger + '([a-zA-Z0-9_.-]*)$');
+    const match = textBeforeCaret.match(triggerRegex);
+
+    if (match) {
+      const partial = match[1].toLowerCase();
+      const matches = macros.filter(m =>
+        m.enabled !== false &&
+        !m.isAbbreviation &&
+        m.trigger.toLowerCase().startsWith(partial)
+      ).slice(0, 6);
+
+      if (matches.length > 0) {
+        showAutoSuggest(el, matches);
+      } else {
+        closeAutoSuggest();
+      }
+    } else {
+      closeAutoSuggest();
+    }
+  }, true);
+
+  // Handle keyboard navigation in auto-suggest
+  document.addEventListener('keydown', (e) => {
+    if (!autoSuggestPopup) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      autoSuggestIndex = Math.min(autoSuggestIndex + 1, autoSuggestMatches.length - 1);
+      updateAutoSuggestSelection();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      autoSuggestIndex = Math.max(autoSuggestIndex - 1, 0);
+      updateAutoSuggestSelection();
+    } else if (e.key === 'Tab' || e.key === 'Enter') {
+      if (autoSuggestMatches.length > 0) {
+        e.preventDefault();
+        selectAutoSuggest(autoSuggestIndex);
+      }
+    } else if (e.key === 'Escape') {
+      closeAutoSuggest();
+    }
+  }, true);
+
+  // Close auto-suggest on blur
+  document.addEventListener('focusout', () => {
+    setTimeout(closeAutoSuggest, 150);
+  });
 
   // ── Messages from popup/background ────────────────────────────────────
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

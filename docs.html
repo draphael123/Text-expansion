@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documentation — SnapText</title>
+  <meta name="description" content="Complete documentation for SnapText. Learn about variables, keyboard shortcuts, cloud sync, sharing macros, and more." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#2563EB" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --blue: #2563EB;
+      --blue-light: #60A5FA;
+      --blue-dark: #1D4ED8;
+      --blue-bg: #EFF6FF;
+      --blue-50: #DBEAFE;
+      --bg: #FFFFFF;
+      --bg-alt: #F8FAFC;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+    }
+    [data-theme="dark"] {
+      --blue: #3B82F6;
+      --blue-bg: #1E293B;
+      --blue-50: #1E3A5F;
+      --bg: #0F172A;
+      --bg-alt: #1E293B;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --border: #334155;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+    .nav-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    [data-theme="dark"] .nav-wrap { background: rgba(15, 23, 42, 0.9); }
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 24px;
+    }
+    .nav-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--blue);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-logo svg { width: 28px; height: 28px; }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-links a {
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--blue); }
+    .docs-layout {
+      display: flex;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .docs-sidebar {
+      width: 240px;
+      padding: 32px 24px;
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 60px;
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+    .docs-nav-section {
+      margin-bottom: 24px;
+    }
+    .docs-nav-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+    .docs-nav-links {
+      list-style: none;
+    }
+    .docs-nav-links a {
+      display: block;
+      padding: 6px 0;
+      font-size: 14px;
+      color: var(--text);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .docs-nav-links a:hover { color: var(--blue); }
+    .docs-content {
+      flex: 1;
+      padding: 48px 48px 80px;
+      max-width: 800px;
+    }
+    h1 {
+      font-size: 40px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+    .subtitle {
+      font-size: 18px;
+      color: var(--text-muted);
+      margin-bottom: 48px;
+    }
+    h2 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-top: 48px;
+      margin-bottom: 16px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      scroll-margin-top: 80px;
+    }
+    h2:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+    h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 32px;
+      margin-bottom: 12px;
+      scroll-margin-top: 80px;
+    }
+    p { margin-bottom: 16px; }
+    code {
+      background: var(--bg-alt);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      border: 1px solid var(--border);
+    }
+    pre {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      font-size: 13px;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    ul, ol {
+      margin-bottom: 16px;
+      padding-left: 24px;
+    }
+    li { margin-bottom: 8px; }
+    .info-box {
+      background: var(--blue-bg);
+      border: 1px solid var(--blue-50);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .info-box strong { color: var(--blue); }
+    .variable-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+    .variable-table th, .variable-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .variable-table th {
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+    .variable-table code {
+      color: var(--blue);
+    }
+    .shortcut-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+    .shortcut-table th, .shortcut-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .shortcut-table th {
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+    kbd {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 12px;
+      font-family: inherit;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+    @media (max-width: 900px) {
+      .docs-sidebar { display: none; }
+      .docs-content { padding: 32px 24px; }
+      h1 { font-size: 32px; }
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav>
+      <a class="nav-logo" href="index.html">
+        <svg viewBox="0 0 28 28" fill="none">
+          <rect width="28" height="28" rx="6" fill="#2563EB"/>
+          <path d="M15.5 6L10 15h4.5L12.5 22L18 13h-4.5L15.5 6z" fill="white"/>
+        </svg>
+        SnapText
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="use-cases.html">Use Cases</a>
+        <a href="docs.html" class="active">Docs</a>
+        <a href="changelog.html">Changelog</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar">
+      <div class="docs-nav-section">
+        <div class="docs-nav-title">Getting Started</div>
+        <ul class="docs-nav-links">
+          <li><a href="#installation">Installation</a></li>
+          <li><a href="#first-macro">Your First Macro</a></li>
+          <li><a href="#triggers">Trigger Characters</a></li>
+        </ul>
+      </div>
+      <div class="docs-nav-section">
+        <div class="docs-nav-title">Variables</div>
+        <ul class="docs-nav-links">
+          <li><a href="#var-basic">Basic Variables</a></li>
+          <li><a href="#var-input">User Input</a></li>
+          <li><a href="#var-transform">Text Transform</a></li>
+          <li><a href="#var-advanced">Advanced Variables</a></li>
+        </ul>
+      </div>
+      <div class="docs-nav-section">
+        <div class="docs-nav-title">Features</div>
+        <ul class="docs-nav-links">
+          <li><a href="#shortcuts">Keyboard Shortcuts</a></li>
+          <li><a href="#auto-suggest">Auto-Suggest</a></li>
+          <li><a href="#abbreviation">Abbreviation Mode</a></li>
+          <li><a href="#folders">Folder Management</a></li>
+        </ul>
+      </div>
+      <div class="docs-nav-section">
+        <div class="docs-nav-title">Cloud & Sync</div>
+        <ul class="docs-nav-links">
+          <li><a href="#cloud-setup">Setting Up Cloud Sync</a></li>
+          <li><a href="#sharing">Sharing Macros</a></li>
+          <li><a href="#import-export">Import & Export</a></li>
+        </ul>
+      </div>
+      <div class="docs-nav-section">
+        <div class="docs-nav-title">Troubleshooting</div>
+        <ul class="docs-nav-links">
+          <li><a href="#not-expanding">Macros Not Expanding</a></li>
+          <li><a href="#sync-issues">Sync Issues</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="docs-content">
+      <h1>Documentation</h1>
+      <p class="subtitle">Everything you need to know about using SnapText effectively.</p>
+
+      <h2 id="installation">Installation</h2>
+      <p>SnapText is installed manually as a Chrome extension. Follow these steps:</p>
+      <ol>
+        <li><strong>Download</strong> the extension from the <a href="index.html">homepage</a> or <a href="downloads/snaptext-extension-v2.0.3.zip">direct link</a></li>
+        <li><strong>Unzip</strong> the downloaded file to a folder on your computer</li>
+        <li>Open Chrome and go to <code>chrome://extensions</code></li>
+        <li>Enable <strong>Developer mode</strong> (toggle in top-right corner)</li>
+        <li>Click <strong>"Load unpacked"</strong> and select the unzipped folder</li>
+      </ol>
+      <div class="info-box">
+        <strong>Tip:</strong> SnapText works on any Chromium-based browser including Chrome, Edge, Brave, Arc, and Opera.
+      </div>
+
+      <h2 id="first-macro">Your First Macro</h2>
+      <p>Let's create a simple email signature macro:</p>
+      <ol>
+        <li>Click the SnapText icon in your browser toolbar</li>
+        <li>Click <strong>"Add Macro"</strong></li>
+        <li>Enter a trigger: <code>sig</code></li>
+        <li>Enter your expansion text: <code>Best regards,\nYour Name</code></li>
+        <li>Click <strong>"Save"</strong></li>
+      </ol>
+      <p>Now type <code>;sig</code> followed by Space in any text field to insert your signature!</p>
+
+      <h2 id="triggers">Trigger Characters</h2>
+      <p>By default, macros are triggered by typing a semicolon (<code>;</code>) followed by the trigger word. You can customize this in Settings:</p>
+      <ul>
+        <li>Common alternatives: <code>/</code>, <code>:</code>, <code>!</code>, <code>@</code></li>
+        <li>The trigger must be followed by a space, tab, or enter to expand</li>
+      </ul>
+
+      <h2 id="var-basic">Basic Variables</h2>
+      <p>Variables are placeholders that get replaced with dynamic content when the macro expands.</p>
+      <table class="variable-table">
+        <tr><th>Variable</th><th>Description</th><th>Example Output</th></tr>
+        <tr><td><code>{{date}}</code></td><td>Current date</td><td>April 6, 2026</td></tr>
+        <tr><td><code>{{time}}</code></td><td>Current time</td><td>2:30 PM</td></tr>
+        <tr><td><code>{{clipboard}}</code></td><td>Clipboard contents</td><td>(whatever was copied)</td></tr>
+        <tr><td><code>{{cursor}}</code></td><td>Final cursor position</td><td>(cursor lands here)</td></tr>
+      </table>
+
+      <h3>Relative Dates</h3>
+      <p>Get dates relative to today:</p>
+      <table class="variable-table">
+        <tr><th>Variable</th><th>Description</th></tr>
+        <tr><td><code>{{date+7}}</code></td><td>7 days from now</td></tr>
+        <tr><td><code>{{date-1}}</code></td><td>Yesterday</td></tr>
+        <tr><td><code>{{date+30}}</code></td><td>30 days from now</td></tr>
+      </table>
+
+      <h2 id="var-input">User Input Variables</h2>
+      <p>Prompt the user for input when the macro expands:</p>
+      <table class="variable-table">
+        <tr><th>Variable</th><th>Description</th></tr>
+        <tr><td><code>{{input:Label}}</code></td><td>Shows a text input with the label</td></tr>
+        <tr><td><code>{{select:A,B,C}}</code></td><td>Shows a dropdown with options A, B, C</td></tr>
+      </table>
+      <p><strong>Example:</strong></p>
+      <pre>Hi {{input:Name}},
+
+Thank you for contacting us about {{select:billing,technical support,general inquiry}}.
+
+Best regards</pre>
+
+      <h2 id="var-transform">Text Transform Variables</h2>
+      <p>Transform text to uppercase or lowercase:</p>
+      <table class="variable-table">
+        <tr><th>Variable</th><th>Input</th><th>Output</th></tr>
+        <tr><td><code>{{uppercase}}text{{/uppercase}}</code></td><td>hello world</td><td>HELLO WORLD</td></tr>
+        <tr><td><code>{{lowercase}}TEXT{{/lowercase}}</code></td><td>HELLO WORLD</td><td>hello world</td></tr>
+      </table>
+
+      <h2 id="var-advanced">Advanced Variables</h2>
+
+      <h3>Random Selection</h3>
+      <p>Pick a random item from a list:</p>
+      <pre>{{random:Hello,Hi,Hey,Greetings}} there!</pre>
+      <p>Output: "Hi there!" (randomly selected)</p>
+
+      <h3>Math Calculations</h3>
+      <p>Perform simple math:</p>
+      <table class="variable-table">
+        <tr><th>Variable</th><th>Output</th></tr>
+        <tr><td><code>{{calc:10+5}}</code></td><td>15</td></tr>
+        <tr><td><code>{{calc:100*0.15}}</code></td><td>15</td></tr>
+        <tr><td><code>{{calc:(50+50)/4}}</code></td><td>25</td></tr>
+      </table>
+
+      <h2 id="shortcuts">Keyboard Shortcuts</h2>
+      <table class="shortcut-table">
+        <tr><th>Shortcut</th><th>Action</th></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></td><td>Open quick search overlay</td></tr>
+        <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Navigate macro list</td></tr>
+        <tr><td><kbd>Enter</kbd> or <kbd>Tab</kbd></td><td>Select and insert macro</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Close overlay or cancel</td></tr>
+      </table>
+      <div class="info-box">
+        <strong>Customize shortcuts:</strong> Open the dashboard and go to Settings to change the default keyboard shortcut.
+      </div>
+
+      <h2 id="auto-suggest">Auto-Suggest</h2>
+      <p>When enabled, SnapText shows matching macros as you type. After typing your trigger character, suggestions appear automatically.</p>
+      <ul>
+        <li>Use <kbd>↑</kbd> / <kbd>↓</kbd> to navigate suggestions</li>
+        <li>Press <kbd>Tab</kbd> or <kbd>Enter</kbd> to select</li>
+        <li>Press <kbd>Esc</kbd> to dismiss</li>
+      </ul>
+      <p>Toggle auto-suggest in Settings.</p>
+
+      <h2 id="abbreviation">Abbreviation Mode</h2>
+      <p>Abbreviation mode lets specific macros expand without the trigger prefix. Enable it per-macro in the macro editor.</p>
+      <p><strong>Example:</strong> Set "btw" as an abbreviation. Typing "btw " will expand to "by the way" without needing ";btw".</p>
+      <div class="info-box">
+        <strong>Note:</strong> Use abbreviation mode sparingly to avoid accidental expansions.
+      </div>
+
+      <h2 id="folders">Folder Management</h2>
+      <p>Organize macros into folders:</p>
+      <ol>
+        <li>Open the Dashboard</li>
+        <li>Click <strong>"+ New Folder"</strong> in the sidebar</li>
+        <li>Name your folder (e.g., "Work", "Personal", "Code")</li>
+        <li>Drag macros to folders or assign when editing</li>
+      </ol>
+
+      <h2 id="cloud-setup">Setting Up Cloud Sync</h2>
+      <p>Cloud sync backs up your macros and syncs them across devices:</p>
+      <ol>
+        <li>Open the Dashboard</li>
+        <li>Click <strong>"Sign In"</strong></li>
+        <li>Sign in with your Google account</li>
+        <li>Your macros will automatically sync</li>
+      </ol>
+      <div class="info-box">
+        <strong>Privacy:</strong> Your macros are stored securely in Firebase. Only you can access your data.
+      </div>
+
+      <h2 id="sharing">Sharing Macros</h2>
+      <p>Share macro packs with others:</p>
+      <ol>
+        <li>Select macros you want to share</li>
+        <li>Click <strong>"Share"</strong></li>
+        <li>Choose visibility (public or private link)</li>
+        <li>Copy the 8-character share code</li>
+      </ol>
+      <p>Others can import your pack by entering the share code in the Explore tab.</p>
+
+      <h2 id="import-export">Import & Export</h2>
+      <p>Export your macros for backup or transfer:</p>
+      <ul>
+        <li><strong>JSON export:</strong> Full data including folders and settings</li>
+        <li><strong>CSV export:</strong> Simple format for spreadsheet editing</li>
+      </ul>
+      <p>Import from the Dashboard by clicking the import button and selecting your file.</p>
+
+      <h2 id="not-expanding">Troubleshooting: Macros Not Expanding</h2>
+      <p>If macros aren't expanding, try these steps:</p>
+      <ol>
+        <li><strong>Check the trigger:</strong> Make sure you're using the correct prefix (default: <code>;</code>)</li>
+        <li><strong>Add a space:</strong> Type space, tab, or enter after the trigger to expand</li>
+        <li><strong>Refresh the page:</strong> The content script may need to reload</li>
+        <li><strong>Check the field type:</strong> Some websites use custom editors that may not be compatible</li>
+        <li><strong>Disable conflicting extensions:</strong> Other text expanders may interfere</li>
+      </ol>
+
+      <h2 id="sync-issues">Troubleshooting: Sync Issues</h2>
+      <p>If sync isn't working:</p>
+      <ol>
+        <li><strong>Check your connection:</strong> Ensure you're online</li>
+        <li><strong>Re-authenticate:</strong> Sign out and sign back in</li>
+        <li><strong>Force sync:</strong> Click the sync button in the dashboard</li>
+        <li><strong>Check for conflicts:</strong> If the same macro was edited on multiple devices, you may need to resolve conflicts</li>
+      </ol>
+    </main>
+  </div>
+
+  <footer>
+    <p>SnapText &copy; 2026 &middot; <a href="index.html">Home</a> &middot; <a href="use-cases.html">Use Cases</a> &middot; <a href="changelog.html">Changelog</a> &middot; <a href="https://github.com/draphael123/Text-expansion" target="_blank">GitHub</a></p>
+  </footer>
+
+  <script>
+    // Theme persistence
+    const savedTheme = localStorage.getItem('snaptext-theme');
+    if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.setAttribute('data-theme', 'dark');
+  </script>
+</body>
+</html>

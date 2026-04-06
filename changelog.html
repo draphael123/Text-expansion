@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Changelog — SnapText</title>
+  <meta name="description" content="See what's new in SnapText. Release notes, new features, bug fixes, and improvements." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#2563EB" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --blue: #2563EB;
+      --blue-light: #60A5FA;
+      --blue-dark: #1D4ED8;
+      --blue-bg: #EFF6FF;
+      --blue-50: #DBEAFE;
+      --bg: #FFFFFF;
+      --bg-alt: #F8FAFC;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --green: #22C55E;
+      --orange: #F59E0B;
+      --red: #EF4444;
+    }
+    [data-theme="dark"] {
+      --blue: #3B82F6;
+      --blue-bg: #1E293B;
+      --blue-50: #1E3A5F;
+      --bg: #0F172A;
+      --bg-alt: #1E293B;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --border: #334155;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+    .nav-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    [data-theme="dark"] .nav-wrap { background: rgba(15, 23, 42, 0.9); }
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 24px;
+    }
+    .nav-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--blue);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-logo svg { width: 28px; height: 28px; }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-links a {
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--blue); }
+    .container { max-width: 800px; margin: 0 auto; padding: 60px 24px; }
+    h1 {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 18px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 60px;
+    }
+    .version {
+      margin-bottom: 48px;
+      scroll-margin-top: 80px;
+    }
+    .version-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .version-number {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--blue);
+    }
+    .version-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: var(--bg-alt);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .version-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .version-tag.latest {
+      background: var(--green);
+      color: white;
+    }
+    .version-tag.major {
+      background: var(--blue);
+      color: white;
+    }
+    .changes {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .change-group {
+      margin-bottom: 20px;
+    }
+    .change-group:last-child { margin-bottom: 0; }
+    .change-type {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .change-type.added { color: var(--green); }
+    .change-type.improved { color: var(--blue); }
+    .change-type.fixed { color: var(--orange); }
+    .change-type.removed { color: var(--red); }
+    .change-list {
+      list-style: none;
+    }
+    .change-list li {
+      font-size: 14px;
+      padding: 6px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+    .change-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 14px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    .timeline {
+      position: relative;
+      padding-left: 24px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .timeline .version {
+      position: relative;
+    }
+    .timeline .version::before {
+      content: '';
+      position: absolute;
+      left: -24px;
+      top: 8px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--blue);
+      border: 2px solid var(--bg);
+    }
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+    @media (max-width: 768px) {
+      h1 { font-size: 36px; }
+      .version-number { font-size: 20px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav>
+      <a class="nav-logo" href="index.html">
+        <svg viewBox="0 0 28 28" fill="none">
+          <rect width="28" height="28" rx="6" fill="#2563EB"/>
+          <path d="M15.5 6L10 15h4.5L12.5 22L18 13h-4.5L15.5 6z" fill="white"/>
+        </svg>
+        SnapText
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="use-cases.html">Use Cases</a>
+        <a href="docs.html">Docs</a>
+        <a href="changelog.html" class="active">Changelog</a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="container">
+    <h1>Changelog</h1>
+    <p class="subtitle">See what's new in SnapText. All notable changes are documented here.</p>
+
+    <div class="timeline">
+      <div class="version" id="v2.0.3">
+        <div class="version-header">
+          <span class="version-number">v2.0.3</span>
+          <span class="version-date">April 6, 2026</span>
+          <span class="version-tag latest">Latest</span>
+        </div>
+        <div class="changes">
+          <div class="change-group">
+            <div class="change-type added">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Added
+            </div>
+            <ul class="change-list">
+              <li>New variable types: <code>{{uppercase}}</code>, <code>{{lowercase}}</code>, <code>{{random:}}</code>, <code>{{calc:}}</code>, <code>{{select:}}</code>, <code>{{date+/-N}}</code></li>
+              <li>Auto-suggest feature shows matching macros as you type</li>
+              <li>Custom trigger character support (change from ; to any character)</li>
+              <li>Keyboard shortcut customization for quick search</li>
+              <li>Abbreviation mode - expand macros without trigger prefix</li>
+              <li>Dark mode for website with system preference detection</li>
+              <li>PWA support - install SnapText dashboard as an app</li>
+              <li>Browser detection for platform-specific install instructions</li>
+              <li>Mobile-friendly hamburger menu navigation</li>
+              <li>Live expansion counter on homepage</li>
+              <li>New pages: Use Cases, Documentation, Changelog</li>
+            </ul>
+          </div>
+          <div class="change-group">
+            <div class="change-type improved">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              Improved
+            </div>
+            <ul class="change-list">
+              <li>Replaced deprecated <code>document.execCommand</code> with modern Input Events API</li>
+              <li>Better mobile experience with responsive design improvements</li>
+              <li>Enhanced settings UI in dashboard</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="version" id="v2.0.2">
+        <div class="version-header">
+          <span class="version-number">v2.0.2</span>
+          <span class="version-date">April 4, 2026</span>
+        </div>
+        <div class="changes">
+          <div class="change-group">
+            <div class="change-type added">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Added
+            </div>
+            <ul class="change-list">
+              <li>Web dashboard for browser-based macro management</li>
+              <li>Full landing page with feature showcase</li>
+              <li>Demo animation showing text expansion in action</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="version" id="v2.0.1">
+        <div class="version-header">
+          <span class="version-number">v2.0.1</span>
+          <span class="version-date">April 3, 2026</span>
+        </div>
+        <div class="changes">
+          <div class="change-group">
+            <div class="change-type added">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Added
+            </div>
+            <ul class="change-list">
+              <li>Version stamp in popup header</li>
+            </ul>
+          </div>
+          <div class="change-group">
+            <div class="change-type fixed">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Fixed
+            </div>
+            <ul class="change-list">
+              <li>Resilient popup loading with inline defaults</li>
+              <li>Promise-based message handlers for better reliability</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="version" id="v2.0.0">
+        <div class="version-header">
+          <span class="version-number">v2.0.0</span>
+          <span class="version-date">April 2, 2026</span>
+          <span class="version-tag major">Major</span>
+        </div>
+        <div class="changes">
+          <div class="change-group">
+            <div class="change-type added">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Added
+            </div>
+            <ul class="change-list">
+              <li>Firebase cloud sync - back up and sync macros across devices</li>
+              <li>Macro sharing with 8-character share codes</li>
+              <li>Explore library for discovering public macro packs</li>
+              <li>Folder management - create, rename, delete folders</li>
+              <li>CSV and JSON import/export</li>
+              <li>Quick search overlay (Ctrl+Shift+Space)</li>
+              <li>Full dashboard for managing macros and settings</li>
+              <li>Dynamic variables: <code>{{date}}</code>, <code>{{time}}</code>, <code>{{input:}}</code>, <code>{{cursor}}</code>, <code>{{clipboard}}</code></li>
+              <li>Context-based macro suggestions</li>
+            </ul>
+          </div>
+          <div class="change-group">
+            <div class="change-type improved">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              Improved
+            </div>
+            <ul class="change-list">
+              <li>Complete UI redesign with modern blue/white theme</li>
+              <li>Better text insertion with undo support</li>
+              <li>Improved contenteditable field compatibility</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="version" id="v1.0.0">
+        <div class="version-header">
+          <span class="version-number">v1.0.0</span>
+          <span class="version-date">March 2026</span>
+        </div>
+        <div class="changes">
+          <div class="change-group">
+            <div class="change-type added">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Added
+            </div>
+            <ul class="change-list">
+              <li>Initial release</li>
+              <li>Basic text expansion with ; prefix</li>
+              <li>Local storage for macros</li>
+              <li>Simple popup interface for managing snippets</li>
+              <li>Works in standard text inputs and textareas</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>SnapText &copy; 2026 &middot; <a href="index.html">Home</a> &middot; <a href="docs.html">Docs</a> &middot; <a href="use-cases.html">Use Cases</a> &middot; <a href="https://github.com/draphael123/Text-expansion" target="_blank">GitHub</a></p>
+  </footer>
+
+  <script>
+    // Theme persistence
+    const savedTheme = localStorage.getItem('snaptext-theme');
+    if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.setAttribute('data-theme', 'dark');
+  </script>
+</body>
+</html>

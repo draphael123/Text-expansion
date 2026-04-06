@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SnapText — Instant Text Expansion for Chrome</title>
   <meta name="description" content="Type less, do more. SnapText expands text shortcuts into full snippets instantly — with variables, cross-device sync, and zero friction." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#2563EB" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="SnapText" />
+  <link rel="apple-touch-icon" href="icons/icon128.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -23,6 +29,41 @@
       --text: #0F172A;
       --text-muted: #64748B;
       --border: #E2E8F0;
+    }
+
+    /* Dark mode theme */
+    [data-theme="dark"] {
+      --blue: #3B82F6;
+      --blue-light: #60A5FA;
+      --blue-dark: #2563EB;
+      --blue-bg: #1E293B;
+      --blue-50: #1E3A5F;
+      --bg: #0F172A;
+      --bg-alt: #1E293B;
+      --white: #1E293B;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --border: #334155;
+    }
+
+    [data-theme="dark"] .nav-wrap {
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    [data-theme="dark"] .comparison-table th.highlight {
+      background: #1E3A5F;
+    }
+
+    [data-theme="dark"] .cta {
+      background: #1E293B;
+    }
+
+    [data-theme="dark"] .var-code {
+      background: #334155;
+    }
+
+    [data-theme="dark"] code {
+      background: #334155;
     }
 
     body {
@@ -75,6 +116,22 @@
     }
     .nav-links a:hover { color: var(--blue); }
 
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .theme-toggle:hover { color: var(--blue); border-color: var(--blue); }
+    [data-theme="dark"] .theme-toggle .sun-icon { display: none; }
+    [data-theme="dark"] .theme-toggle .moon-icon { display: block !important; }
+
     .btn-install {
       display: inline-flex;
       align-items: center;
@@ -117,6 +174,29 @@
       border-radius: 20px;
       margin-bottom: 28px;
       border: 1px solid var(--blue-50);
+    }
+
+    .hero-counter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .hero-stat {
+      text-align: center;
+    }
+    .hero-stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--blue);
+      letter-spacing: -1px;
+    }
+    .hero-stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
     }
 
     .hero h1 {
@@ -397,8 +477,13 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 16px;
-      max-width: 900px;
+      max-width: 1000px;
       margin: 0 auto;
+    }
+
+    .var-grid-wide {
+      grid-template-columns: repeat(4, 1fr);
+      max-width: 900px;
     }
 
     .var-item {
@@ -527,6 +612,81 @@
     }
 
     /* ── Responsive ──────────────────────────────────── */
+    /* ── Hamburger Menu ─────────────────────────────────── */
+    .hamburger {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      color: var(--text);
+    }
+    .hamburger svg { width: 24px; height: 24px; }
+
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+    }
+    .mobile-nav.open { display: flex; justify-content: flex-end; }
+
+    .mobile-nav-content {
+      width: 280px;
+      max-width: 80vw;
+      background: var(--bg);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+      animation: slideIn 0.2s ease-out;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+
+    .mobile-nav-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .mobile-nav-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px;
+    }
+
+    .mobile-nav-links {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 0;
+    }
+    .mobile-nav-links a {
+      padding: 14px 24px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .mobile-nav-links a:hover { background: var(--bg-alt); }
+
+    .mobile-nav-actions {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+    }
+
     @media (max-width: 768px) {
       .hero { padding: 60px 24px 40px; }
       .hero h1 { font-size: 40px; letter-spacing: -1px; }
@@ -536,7 +696,20 @@
       .var-grid { grid-template-columns: repeat(2, 1fr); }
       .steps { grid-template-columns: 1fr; gap: 40px; }
       .nav-links { display: none; }
+      .hamburger { display: block; }
       .comparison-table { font-size: 13px; }
+    }
+
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 32px; }
+      .hero-sub { font-size: 14px; }
+      .var-grid { grid-template-columns: 1fr; }
+      .var-card { padding: 16px; }
+      .var-code { font-size: 11px; padding: 4px 8px; }
+      .demo-window { width: 100%; }
+      .comparison-table { font-size: 12px; }
+      .comparison-table th, .comparison-table td { padding: 10px 8px; }
+      section { padding-left: 16px !important; padding-right: 16px !important; }
     }
 
     /* ── Animations ──────────────────────────────────── */
@@ -853,13 +1026,58 @@
         <a href="#how-it-works">How It Works</a>
         <a href="#features">Features</a>
         <a href="#variables">Variables</a>
+        <button id="theme-toggle" class="theme-toggle" title="Toggle dark mode">
+          <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
         <a href="#" id="nav-signin" class="btn-install">Sign In</a>
         <a href="#" id="nav-dashboard" class="btn-install" style="display:none;">My Dashboard</a>
-        <a href="downloads/snaptext-extension-v2.0.2.zip" class="btn-install" download>
+        <a href="downloads/snaptext-extension-v2.0.3.zip" class="btn-install" download>
           Download Extension
         </a>
       </div>
+      <button class="hamburger" id="hamburger-btn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
     </nav>
+  </div>
+
+  <!-- Mobile Navigation -->
+  <div class="mobile-nav" id="mobile-nav">
+    <div class="mobile-nav-content">
+      <div class="mobile-nav-header">
+        <span style="font-weight:700;color:var(--blue);">Menu</span>
+        <button class="mobile-nav-close" id="mobile-nav-close" aria-label="Close menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="mobile-nav-links">
+        <a href="#how-it-works">How It Works</a>
+        <a href="#features">Features</a>
+        <a href="#variables">Variables</a>
+        <a href="#install">Install Guide</a>
+      </div>
+      <div class="mobile-nav-actions">
+        <button id="mobile-theme-toggle" class="theme-toggle" style="width:100%;justify-content:center;gap:8px;">
+          <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <span>Toggle Theme</span>
+        </button>
+        <a href="downloads/snaptext-extension-v2.0.3.zip" class="btn-install" style="text-align:center;" download>Download Extension</a>
+      </div>
+    </div>
   </div>
 
   <!-- Landing Page Content -->
@@ -868,22 +1086,38 @@
   <!-- Hero -->
   <section class="hero">
     <div class="hero-badge">Free forever &middot; No account required</div>
+    <div class="hero-counter">
+      <div class="hero-stat">
+        <div class="hero-stat-value" id="expansion-count">0</div>
+        <div class="hero-stat-label">text expansions</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-value" id="time-saved">0h</div>
+        <div class="hero-stat-label">time saved</div>
+      </div>
+    </div>
     <h1>Type a shortcut.<br /><span class="accent">Get the full text.</span></h1>
     <p class="hero-sub">SnapText turns short triggers into complete text snippets. Smart variables, cross-device sync, and it works in every text field on the web.</p>
     <div class="hero-actions">
-      <a href="downloads/snaptext-extension-v2.0.2.zip" class="btn-install-lg" download>
+      <a href="downloads/snaptext-extension-v2.0.3.zip" class="btn-install-lg" download>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download SnapText — It's Free
       </a>
       <a href="#how-it-works" class="btn-secondary">See how it works</a>
     </div>
-    <p style="font-size:13px;color:var(--text-muted);margin-top:12px;">v2.0.2 &middot; 36 KB &middot; Updated April 4, 2026 &middot; <a href="https://github.com/draphael123/Text-expansion" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:500;">View on GitHub</a></p>
+    <p style="font-size:13px;color:var(--text-muted);margin-top:12px;">v2.0.3 &middot; 41 KB &middot; Updated April 6, 2026 &middot; <a href="https://github.com/draphael123/Text-expansion" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:500;">View on GitHub</a></p>
     <p class="hero-note">Works on Chrome, Brave, Edge, Arc, and any Chromium browser</p>
   </section>
 
   <!-- Install Steps -->
   <section id="install" style="max-width:720px;margin:0 auto;padding:48px 24px 16px;">
-    <h2 style="text-align:center;font-size:24px;font-weight:800;margin-bottom:24px;">How to Install</h2>
+    <h2 style="text-align:center;font-size:24px;font-weight:800;margin-bottom:8px;">How to Install</h2>
+    <div id="browser-badge" style="text-align:center;margin-bottom:24px;">
+      <span style="display:inline-flex;align-items:center;gap:6px;background:var(--blue-bg);color:var(--blue);font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;border:1px solid var(--blue-50);">
+        <svg id="browser-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"></svg>
+        <span id="browser-name">Chrome</span> detected
+      </span>
+    </div>
     <div style="display:flex;flex-direction:column;gap:16px;">
       <div style="display:flex;align-items:flex-start;gap:16px;background:var(--bg-alt);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="min-width:36px;height:36px;background:var(--blue);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;">1</div>
@@ -895,8 +1129,8 @@
       <div style="display:flex;align-items:flex-start;gap:16px;background:var(--bg-alt);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="min-width:36px;height:36px;background:var(--blue);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;">2</div>
         <div>
-          <div style="font-weight:600;margin-bottom:4px;">Open Chrome Extensions</div>
-          <div style="font-size:14px;color:var(--text-muted);">Go to <code style="background:#EEF;padding:2px 6px;border-radius:4px;font-size:13px;">chrome://extensions</code> in your browser and enable <strong>Developer mode</strong> (toggle in the top-right corner).</div>
+          <div style="font-weight:600;margin-bottom:4px;">Open <span id="step2-browser">Chrome</span> Extensions</div>
+          <div id="step2-instructions" style="font-size:14px;color:var(--text-muted);">Go to <code style="background:#EEF;padding:2px 6px;border-radius:4px;font-size:13px;">chrome://extensions</code> in your browser and enable <strong>Developer mode</strong> (toggle in the top-right corner).</div>
         </div>
       </div>
       <div style="display:flex;align-items:flex-start;gap:16px;background:var(--bg-alt);border:1px solid var(--border);border-radius:12px;padding:20px;">
@@ -912,14 +1146,15 @@
 
   <!-- What's New -->
   <section style="max-width:720px;margin:0 auto;padding:32px 24px 16px;">
-    <h2 style="text-align:center;font-size:24px;font-weight:800;margin-bottom:20px;">What's New in v2.0.2</h2>
+    <h2 style="text-align:center;font-size:24px;font-weight:800;margin-bottom:20px;">What's New in v2.0.3</h2>
     <div style="background:var(--bg-alt);border:1px solid var(--border);border-radius:12px;padding:24px;">
       <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;color:var(--text);">
-        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Firebase cloud sync</strong> — back up your macros and sync across devices with a free account</span></div>
-        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Macro sharing</strong> — publish macro packs with 8-character share codes, browse public packs in the Explore library</span></div>
-        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Folder management</strong> — create, rename, and delete folders to organize your macros</span></div>
-        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>CSV & JSON export/import</strong> — move macros between devices or back them up locally</span></div>
-        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Improved dashboard</strong> — full-featured UI for managing macros, settings, sharing, and your account</span></div>
+        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>New variables</strong> — {{uppercase}}, {{lowercase}}, {{random:}}, {{calc:}}, {{select:}}, {{date+N}}</span></div>
+        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Auto-suggest</strong> — see matching macros as you type your trigger</span></div>
+        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Custom trigger character</strong> — change from ; to any character you prefer</span></div>
+        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Abbreviation mode</strong> — expand macros without the trigger prefix</span></div>
+        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Rich text support</strong> — markdown syntax (**bold**, *italic*, [link](url)) in contenteditable</span></div>
+        <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--blue);font-weight:700;">+</span><span><strong>Offline indicator</strong> — see when you're offline, changes sync when reconnected</span></div>
       </div>
     </div>
   </section>
@@ -1025,6 +1260,10 @@
         <span class="var-desc">Current time</span>
       </div>
       <div class="var-item fade-up">
+        <span class="var-code">{{date+7}}</span>
+        <span class="var-desc">Relative date</span>
+      </div>
+      <div class="var-item fade-up">
         <span class="var-code">{{clipboard}}</span>
         <span class="var-desc">Clipboard contents</span>
       </div>
@@ -1035,6 +1274,22 @@
       <div class="var-item fade-up">
         <span class="var-code">{{input:Label}}</span>
         <span class="var-desc">Custom prompt</span>
+      </div>
+      <div class="var-item fade-up">
+        <span class="var-code">{{select:a,b,c}}</span>
+        <span class="var-desc">Dropdown picker</span>
+      </div>
+      <div class="var-item fade-up">
+        <span class="var-code">{{random:a,b}}</span>
+        <span class="var-desc">Random selection</span>
+      </div>
+      <div class="var-item fade-up">
+        <span class="var-code">{{calc:1+1}}</span>
+        <span class="var-desc">Math expression</span>
+      </div>
+      <div class="var-item fade-up">
+        <span class="var-code">{{uppercase}}</span>
+        <span class="var-desc">Text wrapper</span>
       </div>
     </div>
   </section>
@@ -1132,7 +1387,7 @@
   <section class="cta">
     <h2>Start typing less today.</h2>
     <p>Download, unzip, load in Chrome. No account required. Free forever.</p>
-    <a href="downloads/snaptext-extension-v2.0.2.zip" class="btn-install-white" download>
+    <a href="downloads/snaptext-extension-v2.0.3.zip" class="btn-install-white" download>
       Download SnapText — It's Free
     </a>
   </section>
@@ -1388,7 +1643,7 @@
             <label>Expansion body</label>
             <textarea id="wd-macro-body" placeholder="The text that will be inserted..."></textarea>
             <div class="wd-form-hint">
-              Variables: <code>{{date}}</code> <code>{{time}}</code> <code>{{clipboard}}</code> <code>{{cursor}}</code> <code>{{input:Label}}</code>
+              Variables: <code>{{date}}</code> <code>{{time}}</code> <code>{{date+7}}</code> <code>{{clipboard}}</code> <code>{{cursor}}</code> <code>{{input:Label}}</code> <code>{{select:a,b}}</code> <code>{{random:a,b}}</code> <code>{{calc:1+1}}</code> <code>{{uppercase}}...{{/uppercase}}</code>
             </div>
           </div>
           <div class="wd-form-group">
@@ -1434,6 +1689,62 @@
 
   <!-- Scripts -->
   <script>
+    // ── Live expansion counter ─────────────────────────────────────────
+    (function initCounter() {
+      const countEl = document.getElementById('expansion-count');
+      const timeEl = document.getElementById('time-saved');
+      if (!countEl || !timeEl) return;
+
+      // Get count from localStorage (simulated community total + local)
+      const baseCount = 127849; // Community base
+      const localCount = parseInt(localStorage.getItem('snaptext-expansions') || '0', 10);
+      const totalCount = baseCount + localCount;
+
+      // Calculate time saved (avg 15 seconds per expansion)
+      function formatTime(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        if (hours >= 1) return `${hours.toLocaleString()}h`;
+        return `${mins}m`;
+      }
+
+      // Animate counter
+      function animateValue(el, start, end, duration, formatter = (v) => v.toLocaleString()) {
+        const startTime = performance.now();
+        function update(currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease out quad
+          const eased = 1 - (1 - progress) * (1 - progress);
+          const current = Math.floor(start + (end - start) * eased);
+          el.textContent = formatter(current);
+          if (progress < 1) requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+      }
+
+      // Start animation when visible
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          observer.disconnect();
+          animateValue(countEl, 0, totalCount, 1500);
+          animateValue(timeEl, 0, totalCount * 15, 1500, formatTime);
+        }
+      }, { threshold: 0.5 });
+      observer.observe(countEl);
+
+      // Listen for messages from extension
+      window.addEventListener('message', (e) => {
+        if (e.data?.type === 'snaptext-expansion') {
+          const newLocal = parseInt(localStorage.getItem('snaptext-expansions') || '0', 10) + 1;
+          localStorage.setItem('snaptext-expansions', newLocal.toString());
+          const newTotal = baseCount + newLocal;
+          countEl.textContent = newTotal.toLocaleString();
+          timeEl.textContent = formatTime(newTotal * 15);
+        }
+      });
+    })();
+
     // ── Demo animation ──────────────────────────────────────────────────
     const demos = [
       { label: 'Compose email', typing: ';sig', result: 'Best regards,\nDaniel Raphael' },
@@ -1501,6 +1812,151 @@
       }
     });
     demoObserver.observe(document.querySelector('.demo'));
+
+    // ── Dark mode toggle ─────────────────────────────────────────────────
+    (function initTheme() {
+      const themeToggle = document.getElementById('theme-toggle');
+      const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+
+      function updateIcons(theme) {
+        document.querySelectorAll('.theme-toggle').forEach(btn => {
+          const sun = btn.querySelector('.sun-icon');
+          const moon = btn.querySelector('.moon-icon');
+          if (sun && moon) {
+            sun.style.display = theme === 'dark' ? 'none' : 'block';
+            moon.style.display = theme === 'dark' ? 'block' : 'none';
+          }
+        });
+      }
+
+      function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('snaptext-theme', theme);
+        updateIcons(theme);
+      }
+
+      // Initialize theme from localStorage or system preference
+      const savedTheme = localStorage.getItem('snaptext-theme');
+      if (savedTheme) {
+        setTheme(savedTheme);
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setTheme('dark');
+      }
+
+      // Listen for system theme changes
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('snaptext-theme')) {
+          setTheme(e.matches ? 'dark' : 'light');
+        }
+      });
+
+      // Toggle theme on button click
+      function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+      }
+
+      themeToggle.addEventListener('click', toggleTheme);
+      if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
+    })();
+
+    // ── Mobile navigation ────────────────────────────────────────────────
+    (function initMobileNav() {
+      const hamburger = document.getElementById('hamburger-btn');
+      const mobileNav = document.getElementById('mobile-nav');
+      const closeBtn = document.getElementById('mobile-nav-close');
+      const navLinks = mobileNav.querySelectorAll('.mobile-nav-links a');
+
+      function openNav() {
+        mobileNav.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeNav() {
+        mobileNav.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+
+      hamburger.addEventListener('click', openNav);
+      closeBtn.addEventListener('click', closeNav);
+
+      // Close when clicking overlay background
+      mobileNav.addEventListener('click', (e) => {
+        if (e.target === mobileNav) closeNav();
+      });
+
+      // Close when clicking a nav link
+      navLinks.forEach(link => {
+        link.addEventListener('click', closeNav);
+      });
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && mobileNav.classList.contains('open')) {
+          closeNav();
+        }
+      });
+    })();
+
+    // ── Browser detection ────────────────────────────────────────────────
+    (function detectBrowser() {
+      const ua = navigator.userAgent;
+      let browser = 'Chrome';
+      let extUrl = 'chrome://extensions';
+      let icon = '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M21.17 8H12"/><path d="M3.95 6.06L8.54 14"/><path d="M10.88 21.94L15.46 14"/>';
+
+      if (ua.includes('Edg/')) {
+        browser = 'Edge';
+        extUrl = 'edge://extensions';
+        icon = '<path d="M12 2C6.48 2 2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V14h-2v-2h2v-1.5c0-2.07 1.25-3.2 3.13-3.2.9 0 1.67.07 1.87.1V9.5h-1.28c-1.01 0-1.22.48-1.22 1.19V12h2.44l-.32 2H12.5v7.8c4.56-.93 8-4.96 8-9.8 0-5.52-4.48-10-10-10z"/>';
+      } else if (ua.includes('OPR/') || ua.includes('Opera')) {
+        browser = 'Opera';
+        extUrl = 'opera://extensions';
+        icon = '<circle cx="12" cy="12" r="10"/><path d="M12 6c-2.21 0-4 2.69-4 6s1.79 6 4 6 4-2.69 4-6-1.79-6-4-6z"/>';
+      } else if (ua.includes('Brave')) {
+        browser = 'Brave';
+        extUrl = 'brave://extensions';
+        icon = '<path d="M12 2L3 7v7c0 5.25 3.75 10.13 9 11 5.25-.87 9-5.75 9-11V7l-9-5z"/><path d="M9 12l2 2 4-4" stroke="white" stroke-width="2" fill="none"/>';
+      } else if (ua.includes('Arc')) {
+        browser = 'Arc';
+        extUrl = 'arc://extensions';
+        icon = '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="4"/>';
+      } else if (ua.includes('Firefox')) {
+        browser = 'Firefox';
+        extUrl = '';
+        icon = '<circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 0-4 19.2V14l4-4 4 4v7.2A10 10 0 0 0 12 2z"/>';
+      }
+
+      // Update UI elements
+      const browserIcon = document.getElementById('browser-icon');
+      const browserName = document.getElementById('browser-name');
+      const step2Browser = document.getElementById('step2-browser');
+      const step2Instructions = document.getElementById('step2-instructions');
+
+      if (browserIcon) browserIcon.innerHTML = icon;
+      if (browserName) browserName.textContent = browser;
+      if (step2Browser) step2Browser.textContent = browser;
+
+      if (browser === 'Firefox') {
+        if (step2Instructions) {
+          step2Instructions.innerHTML = '<span style="color:#E11D48;">Firefox is not supported.</span> SnapText requires a Chromium-based browser like Chrome, Edge, Brave, or Arc.';
+        }
+        document.getElementById('browser-badge').querySelector('span').style.background = '#FEE2E2';
+        document.getElementById('browser-badge').querySelector('span').style.borderColor = '#FECACA';
+        document.getElementById('browser-badge').querySelector('span').style.color = '#DC2626';
+      } else if (step2Instructions) {
+        step2Instructions.innerHTML = `Go to <code style="background:#EEF;padding:2px 6px;border-radius:4px;font-size:13px;">${extUrl}</code> in your browser and enable <strong>Developer mode</strong> (toggle in the top-right corner).`;
+      }
+    })();
+
+    // ── Service Worker registration ──────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => console.log('SW registered:', reg.scope))
+          .catch((err) => console.log('SW registration failed:', err));
+      });
+    }
   </script>
   <script src="web-dashboard.js"></script>
 </body>

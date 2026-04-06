@@ -1077,6 +1077,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     })();
     return true;
   }
+
+  if (msg.type === 'CHECK_CONNECTIVITY') {
+    checkCloudConnectivity().then(() => {
+      chrome.storage.local.get(['isOnline']).then(result => {
+        sendResponse({ isOnline: result.isOnline !== false });
+      });
+    });
+    return true;
+  }
 });
 
 // ── Periodic sync with token refresh ────────────────────────────────────
@@ -1100,4 +1109,43 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       }
     }
   }
+
+  if (alarm.name === 'checkConnectivity') {
+    await checkCloudConnectivity();
+  }
 });
+
+// ── Connectivity monitoring ──────────────────────────────────────────────
+let isOnline = true;
+
+async function checkCloudConnectivity() {
+  try {
+    const response = await fetch(`${FIREBASE_FIRESTORE_URL}?pageSize=1`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const newStatus = response.ok || response.status === 401; // 401 means server is reachable
+    if (newStatus !== isOnline) {
+      isOnline = newStatus;
+      await chrome.storage.local.set({ isOnline });
+      // Notify all open tabs
+      chrome.runtime.sendMessage({ type: 'CONNECTIVITY_CHANGED', isOnline }).catch(() => {});
+    }
+  } catch (e) {
+    if (isOnline) {
+      isOnline = false;
+      await chrome.storage.local.set({ isOnline });
+      chrome.runtime.sendMessage({ type: 'CONNECTIVITY_CHANGED', isOnline }).catch(() => {});
+    }
+  }
+}
+
+// Create connectivity check alarm
+try {
+  chrome.alarms.create('checkConnectivity', { periodInMinutes: 1 });
+} catch (e) {
+  console.error('[SnapText] Connectivity alarm creation failed:', e);
+}
+
+// Initial connectivity check
+checkCloudConnectivity();

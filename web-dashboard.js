@@ -698,8 +698,33 @@ function updateWdPreview() {
     return;
   }
   let text = body
+    // Text wrappers
+    .replace(/\{\{uppercase\}\}([\s\S]*?)\{\{\/uppercase\}\}/gi, (_, inner) => inner.toUpperCase())
+    .replace(/\{\{lowercase\}\}([\s\S]*?)\{\{\/lowercase\}\}/gi, (_, inner) => inner.toLowerCase())
+    // Simple variables
     .replace(/\{\{date\}\}/gi, new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))
     .replace(/\{\{time\}\}/gi, new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }))
+    // Relative dates
+    .replace(/\{\{date([+-])(\d+)\}\}/gi, (_, op, days) => {
+      const d = new Date();
+      d.setDate(d.getDate() + (op === '+' ? parseInt(days, 10) : -parseInt(days, 10)));
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    })
+    // Random selection (show first option in preview)
+    .replace(/\{\{random:([^}]+)\}\}/gi, (_, items) => {
+      const options = items.split(',').map(s => s.trim()).filter(s => s);
+      return options.length > 0 ? `[random: ${options[0]}]` : '[random]';
+    })
+    // Math expressions
+    .replace(/\{\{calc:([^}]+)\}\}/gi, (_, expr) => {
+      if (!/^[\d\s+\-*/().]+$/.test(expr)) return '[invalid calc]';
+      try { return Function('"use strict"; return (' + expr + ')')(); } catch { return '[calc error]'; }
+    })
+    // Select dropdown (show options in preview)
+    .replace(/\{\{select:([^}]+)\}\}/gi, (_, items) => {
+      const options = items.split(',').map(s => s.trim()).filter(s => s);
+      return options.length > 0 ? `[select: ${options.join('/')}]` : '[select]';
+    })
     .replace(/\{\{clipboard\}\}/gi, '[clipboard]')
     .replace(/\{\{cursor\}\}/gi, '|')
     .replace(/\{\{input:([^}]+)\}\}/gi, '[$1]')

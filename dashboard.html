@@ -36,6 +36,25 @@
       min-height: 100vh;
     }
 
+    .offline-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: #FEF3C7;
+      color: #92400E;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      border-bottom: 1px solid #FDE68A;
+    }
+    .offline-banner svg { color: #D97706; }
+
     .app { display: flex; min-height: 100vh; }
 
     .sidebar {
@@ -530,6 +549,11 @@
   </style>
 </head>
 <body>
+  <!-- Offline Banner -->
+  <div id="offline-banner" class="offline-banner" style="display:none;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+    <span>You're offline. Changes will sync when reconnected.</span>
+  </div>
   <div class="app">
     <nav class="sidebar">
       <div class="sidebar-logo">
@@ -704,7 +728,24 @@
               <div class="setting-label">Trigger character</div>
               <div class="setting-desc">Character prefix for macros (default: ;)</div>
             </div>
-            <input type="text" id="set-trigger" style="width:50px;text-align:center;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-weight:600;" value=";" />
+            <input type="text" id="set-trigger" style="width:50px;text-align:center;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-weight:600;" value=";" maxlength="1" />
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Auto-suggest</div>
+              <div class="setting-desc">Show suggestions as you type after the trigger character</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="set-autosuggest" checked /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Search overlay shortcut</div>
+              <div class="setting-desc">Keyboard shortcut to open quick search (default: Ctrl+Shift+Space)</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="text" id="set-shortcut-display" readonly style="width:140px;text-align:center;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:12px;cursor:pointer;background:var(--bg-alt);" value="Ctrl+Shift+Space" placeholder="Press keys..." />
+              <button class="btn btn-sm" id="btn-record-shortcut">Record</button>
+            </div>
           </div>
         </div>
 
@@ -787,7 +828,7 @@
           <label>Expansion body</label>
           <textarea id="macro-body" placeholder="The text that will be inserted..."></textarea>
           <div class="form-hint">
-            Variables: <code>{{date}}</code> <code>{{time}}</code> <code>{{clipboard}}</code> <code>{{cursor}}</code> <code>{{input:Label}}</code> <code>{{macro:trigger}}</code>
+            Variables: <code>{{date}}</code> <code>{{time}}</code> <code>{{date+7}}</code> <code>{{clipboard}}</code> <code>{{cursor}}</code> <code>{{input:Label}}</code> <code>{{select:a,b}}</code> <code>{{random:a,b}}</code> <code>{{calc:1+1}}</code> <code>{{uppercase}}...{{/uppercase}}</code> <code>{{macro:trigger}}</code>
           </div>
         </div>
         <div class="form-group">
@@ -798,6 +839,14 @@
           <label>Folder</label>
           <input type="text" id="macro-folder" placeholder="e.g. Email, Work, Personal" list="folder-datalist" />
           <datalist id="folder-datalist"></datalist>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="macro-abbreviation" style="width:16px;height:16px;cursor:pointer;" />
+          <label for="macro-abbreviation" style="cursor:pointer;font-size:13px;color:var(--text-muted);">Abbreviation mode (expand without trigger prefix)</label>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="macro-richtext" style="width:16px;height:16px;cursor:pointer;" />
+          <label for="macro-richtext" style="cursor:pointer;font-size:13px;color:var(--text-muted);">Rich text (convert **bold**, *italic*, [link](url))</label>
         </div>
       </div>
       <div class="modal-footer">
