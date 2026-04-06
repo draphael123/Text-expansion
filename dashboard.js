@@ -356,6 +356,23 @@ function exportCSV() {
   a.click(); URL.revokeObjectURL(url);
 }
 
+function exportSimpleCSV() {
+  const toExport = currentFolder ? macros.filter(m => (m.folder || 'General') === currentFolder) : macros;
+  const header = 'Subject,Content';
+  const rows = toExport.map(m => {
+    const trigger = '"' + (m.trigger || '').replace(/"/g, '""') + '"';
+    const body = '"' + (m.body || '').replace(/"/g, '""') + '"';
+    return `${trigger},${body}`;
+  });
+  const csv = header + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const suffix = currentFolder ? `-${currentFolder.toLowerCase().replace(/\s+/g, '-')}` : '';
+  a.href = url; a.download = `snaptext-simple${suffix}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
 function importFile(file) {
   const reader = new FileReader();
   reader.onload = async (e) => {
@@ -947,6 +964,7 @@ document.addEventListener('click', (e) => {
 });
 $('#btn-export-json').addEventListener('click', () => { exportJSON(); $('#export-menu').classList.remove('visible'); });
 $('#btn-export-csv').addEventListener('click', () => { exportCSV(); $('#export-menu').classList.remove('visible'); });
+$('#btn-export-simple').addEventListener('click', () => { exportSimpleCSV(); $('#export-menu').classList.remove('visible'); });
 
 // Import
 $('#btn-import').addEventListener('click', () => $('#file-import').click());
