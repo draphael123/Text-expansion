@@ -6,7 +6,7 @@
 // ── Firebase Configuration ─────────────────────────────────────────────
 const FIREBASE_CONFIG = {
   projectId: 'snaptext-d1b3f',
-  apiKey: 'AIzaSyBHyvKlLYZARXAKwG6Uk1_XGP4a7Gwp3k',
+  apiKey: 'AIzaSyBHyvKllYZARXAKwG06Uk1_XGP4a7Gwp3k',
   authDomain: 'snaptext-d1b3f.firebaseapp.com'
 };
 
