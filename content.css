@@ -41,7 +41,7 @@
 
 .snaptext-prompt-hint {
   font-size: 11px;
-  color: #94A3B8;
+  color: #64748B;
   margin-bottom: 16px;
 }
 
@@ -55,7 +55,7 @@
 .snaptext-prompt-input {
   width: 100%;
   padding: 10px 12px;
-  border: 2px solid #E2E8F0;
+  border: 2px solid #CBD5E1;
   border-radius: 8px;
   font-size: 14px;
   outline: none;
@@ -72,7 +72,7 @@
 .snaptext-select-input {
   width: 100%;
   padding: 10px 12px;
-  border: 2px solid #E2E8F0;
+  border: 2px solid #CBD5E1;
   border-radius: 8px;
   font-size: 14px;
   outline: none;
@@ -82,7 +82,7 @@
   background: #fff;
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 36px;
@@ -116,9 +116,9 @@
 
 .snaptext-btn-cancel {
   background: #F1F5F9;
-  color: #64748B;
+  color: #475569;
 }
-.snaptext-btn-cancel:hover { background: #E2E8F0; }
+.snaptext-btn-cancel:hover { background: #CBD5E1; }
 
 .snaptext-btn-ok {
   background: #2563EB;
@@ -142,7 +142,7 @@
 .snaptext-field-input {
   width: 100%;
   padding: 9px 12px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #CBD5E1;
   border-radius: 7px;
   font-size: 13px;
   outline: none;
@@ -189,13 +189,13 @@
   display: flex;
   align-items: center;
   padding: 14px 18px;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid #CBD5E1;
   gap: 10px;
 }
 
 .snaptext-search-icon {
   width: 20px; height: 20px;
-  color: #94A3B8;
+  color: #64748B;
   flex-shrink: 0;
 }
 
@@ -209,13 +209,13 @@
   font-family: inherit;
 }
 
-.snaptext-search-field::placeholder { color: #94A3B8; }
+.snaptext-search-field::placeholder { color: #64748B; }
 
 .snaptext-search-ctx {
   font-size: 10px;
   font-weight: 600;
   color: #2563EB;
-  background: #EFF6FF;
+  background: #DBEAFE;
   padding: 3px 8px;
   border-radius: 4px;
   white-space: nowrap;
@@ -224,15 +224,15 @@
 
 .snaptext-search-hint {
   font-size: 10px;
-  color: #94A3B8;
+  color: #64748B;
   background: #F8FAFC;
   padding: 4px 18px;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid #CBD5E1;
 }
 
 .snaptext-search-hint kbd {
   background: #fff;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #CBD5E1;
   padding: 0px 4px;
   border-radius: 3px;
   font-size: 10px;
@@ -255,7 +255,7 @@
 
 .snaptext-search-item:hover,
 .snaptext-search-item.selected {
-  background: #EFF6FF;
+  background: #DBEAFE;
 }
 
 .snaptext-search-trigger {
@@ -268,14 +268,14 @@
   border-radius: 4px;
   min-width: 56px;
   text-align: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #CBD5E1;
   flex-shrink: 0;
 }
 
 .snaptext-search-body {
   flex: 1;
   font-size: 13px;
-  color: #64748B;
+  color: #475569;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -283,7 +283,7 @@
 
 .snaptext-search-folder {
   font-size: 10px;
-  color: #94A3B8;
+  color: #64748B;
   white-space: nowrap;
 }
 
@@ -295,7 +295,7 @@
 .snaptext-search-empty {
   padding: 32px 18px;
   text-align: center;
-  color: #94A3B8;
+  color: #64748B;
   font-size: 13px;
 }
 
@@ -324,7 +324,7 @@
 
 .snaptext-autosuggest-item:hover,
 .snaptext-autosuggest-item.selected {
-  background: #EFF6FF;
+  background: #DBEAFE;
 }
 
 .snaptext-autosuggest-trigger {
@@ -335,14 +335,14 @@
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #CBD5E1;
   white-space: nowrap;
 }
 
 .snaptext-autosuggest-body {
   flex: 1;
   font-size: 12px;
-  color: #64748B;
+  color: #475569;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
