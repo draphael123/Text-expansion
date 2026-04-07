@@ -124,7 +124,20 @@ async function firebaseSignIn(email, password) {
 
     if (!response.ok) {
       const error = await response.json();
-      return { success: false, error: error.error?.message || 'Sign in failed' };
+      const message = error.error?.message || 'Sign in failed';
+      if (message.includes('EMAIL_NOT_FOUND')) {
+        return { success: false, error: 'No account found with this email address.' };
+      }
+      if (message.includes('INVALID_PASSWORD') || message.includes('INVALID_LOGIN_CREDENTIALS')) {
+        return { success: false, error: 'Incorrect password. Please try again.' };
+      }
+      if (message.includes('USER_DISABLED')) {
+        return { success: false, error: 'This account has been disabled.' };
+      }
+      if (message.includes('TOO_MANY_ATTEMPTS')) {
+        return { success: false, error: 'Too many failed attempts. Please try again later.' };
+      }
+      return { success: false, error: message };
     }
 
     const data = await response.json();
@@ -1263,23 +1276,62 @@ function checkWdAuth(session) {
 async function wdSignIn() {
   const email = $('#wd-auth-email').value.trim();
   const password = $('#wd-auth-password').value;
-  if (!email || !password) return alert('Email and password required.');
+  const resultEl = $('#wd-reset-result');
+
+  if (!email || !password) {
+    resultEl.style.display = 'block';
+    resultEl.style.background = '#FEE2E2';
+    resultEl.style.color = '#DC2626';
+    resultEl.textContent = 'Please enter both email and password.';
+    return;
+  }
+
+  // Show loading state
+  resultEl.style.display = 'block';
+  resultEl.style.background = '#F1F5F9';
+  resultEl.style.color = '#64748B';
+  resultEl.textContent = 'Signing in...';
 
   const result = await firebaseSignIn(email, password);
   if (result.success) {
+    resultEl.style.background = '#DCFCE7';
+    resultEl.style.color = '#166534';
+    resultEl.textContent = 'Signed in successfully!';
     checkWdAuth(result.session);
     await syncMacrosFromCloud();
     renderAll();
   } else {
-    alert(result.error || 'Sign in failed.');
+    resultEl.style.background = '#FEE2E2';
+    resultEl.style.color = '#DC2626';
+    resultEl.textContent = result.error || 'Sign in failed. Please check your credentials.';
   }
 }
 
 async function wdSignUp() {
   const email = $('#wd-auth-email').value.trim();
   const password = $('#wd-auth-password').value;
-  if (!email || !password) return alert('Email and password required.');
-  if (password.length < 6) return alert('Password must be at least 6 characters.');
+  const resultEl = $('#wd-reset-result');
+
+  if (!email || !password) {
+    resultEl.style.display = 'block';
+    resultEl.style.background = '#FEE2E2';
+    resultEl.style.color = '#DC2626';
+    resultEl.textContent = 'Please enter both email and password.';
+    return;
+  }
+  if (password.length < 6) {
+    resultEl.style.display = 'block';
+    resultEl.style.background = '#FEE2E2';
+    resultEl.style.color = '#DC2626';
+    resultEl.textContent = 'Password must be at least 6 characters.';
+    return;
+  }
+
+  // Show loading state
+  resultEl.style.display = 'block';
+  resultEl.style.background = '#F1F5F9';
+  resultEl.style.color = '#64748B';
+  resultEl.textContent = 'Creating account...';
 
   const result = await firebaseSignUp(email, password);
   if (result.success) {
@@ -1288,14 +1340,13 @@ async function wdSignUp() {
     for (const m of macros) {
       await pushMacroToCloud(m);
     }
-    // Show verification message
-    const resultEl = $('#wd-reset-result');
-    resultEl.style.display = 'block';
     resultEl.style.background = '#DCFCE7';
     resultEl.style.color = '#166534';
     resultEl.innerHTML = '<strong>Account created!</strong><br>Please check your email to verify your account. You can start using SnapText right away.';
   } else {
-    alert(result.error || 'Sign up failed.');
+    resultEl.style.background = '#FEE2E2';
+    resultEl.style.color = '#DC2626';
+    resultEl.textContent = result.error || 'Sign up failed.';
   }
 }
 

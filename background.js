@@ -188,7 +188,20 @@ async function firebaseSignIn(email, password) {
 
     if (!response.ok) {
       const error = await response.json();
-      return { success: false, error: error.error?.message || 'Sign in failed' };
+      const message = error.error?.message || 'Sign in failed';
+      if (message.includes('EMAIL_NOT_FOUND')) {
+        return { success: false, error: 'No account found with this email address.' };
+      }
+      if (message.includes('INVALID_PASSWORD') || message.includes('INVALID_LOGIN_CREDENTIALS')) {
+        return { success: false, error: 'Incorrect password. Please try again.' };
+      }
+      if (message.includes('USER_DISABLED')) {
+        return { success: false, error: 'This account has been disabled.' };
+      }
+      if (message.includes('TOO_MANY_ATTEMPTS')) {
+        return { success: false, error: 'Too many failed attempts. Please try again later.' };
+      }
+      return { success: false, error: message };
     }
 
     const data = await response.json();
