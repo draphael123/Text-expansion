@@ -1646,12 +1646,18 @@
         <div class="wd-topbar"><h2>Account</h2></div>
         <div id="wd-auth-logged-out">
           <div class="wd-auth-card">
-            <h3>Sign in to back up & sync</h3>
-            <p style="margin-bottom:12px;">Create a free account to back up your macros and sync them across devices.</p>
+            <h3>Account Required</h3>
+            <p style="margin-bottom:12px;"><strong>Create a free account</strong> or sign in to use SnapText. Your account enables:</p>
+            <ul style="text-align:left;font-size:13px;color:var(--text-muted);margin-bottom:16px;padding-left:20px;">
+              <li>Permanent cloud storage for all your macros</li>
+              <li>Sync across all your devices</li>
+              <li>Team workspaces for collaboration</li>
+              <li>Share macros with others</li>
+            </ul>
             <input type="email" class="wd-auth-input" id="wd-auth-email" placeholder="Email address" />
-            <input type="password" class="wd-auth-input" id="wd-auth-password" placeholder="Password" />
-            <button class="wd-btn wd-btn-primary" style="width:100%;margin-bottom:8px;justify-content:center;" id="wd-btn-signin">Sign In</button>
-            <button class="wd-btn" style="width:100%;margin-bottom:8px;justify-content:center;" id="wd-btn-signup">Create Account</button>
+            <input type="password" class="wd-auth-input" id="wd-auth-password" placeholder="Password (min 6 characters)" />
+            <button class="wd-btn wd-btn-primary" style="width:100%;margin-bottom:8px;justify-content:center;" id="wd-btn-signup">Create Account</button>
+            <button class="wd-btn" style="width:100%;margin-bottom:8px;justify-content:center;" id="wd-btn-signin">Already have an account? Sign In</button>
             <a href="#" id="wd-btn-forgot-password" style="font-size:12px;color:var(--blue);text-decoration:none;">Forgot password?</a>
             <div id="wd-reset-result" style="display:none;margin-top:12px;font-size:13px;padding:10px;border-radius:6px;"></div>
           </div>
