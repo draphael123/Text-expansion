@@ -73,20 +73,42 @@ async function firebaseSignUp(email, password) {
 
     if (!response.ok) {
       const error = await response.json();
-      return { success: false, error: error.error?.message || 'Sign up failed' };
+      const message = error.error?.message || 'Sign up failed';
+      if (message.includes('EMAIL_EXISTS')) {
+        return { success: false, error: 'An account with this email already exists.' };
+      }
+      if (message.includes('WEAK_PASSWORD')) {
+        return { success: false, error: 'Password is too weak. Use at least 6 characters.' };
+      }
+      if (message.includes('INVALID_EMAIL')) {
+        return { success: false, error: 'Please enter a valid email address.' };
+      }
+      return { success: false, error: message };
     }
 
     const data = await response.json();
+
+    // Send verification email
+    await fetch(`${FIREBASE_AUTH_URL}/accounts:sendOobCode?key=${FIREBASE_CONFIG.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requestType: 'VERIFY_EMAIL',
+        idToken: data.idToken
+      })
+    });
+
     const session = {
       idToken: data.idToken,
       refreshToken: data.refreshToken,
       localId: data.localId,
       email: data.email,
-      expiresAt: Date.now() + (data.expiresIn * 1000)
+      expiresAt: Date.now() + (data.expiresIn * 1000),
+      emailVerified: false
     };
 
     setStoredSession(session);
-    return { success: true, session };
+    return { success: true, session, verificationSent: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -1266,7 +1288,12 @@ async function wdSignUp() {
     for (const m of macros) {
       await pushMacroToCloud(m);
     }
-    alert('Account created and signed in!');
+    // Show verification message
+    const resultEl = $('#wd-reset-result');
+    resultEl.style.display = 'block';
+    resultEl.style.background = '#DCFCE7';
+    resultEl.style.color = '#166534';
+    resultEl.innerHTML = '<strong>Account created!</strong><br>Please check your email to verify your account. You can start using SnapText right away.';
   } else {
     alert(result.error || 'Sign up failed.');
   }

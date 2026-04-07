@@ -769,11 +769,17 @@ async function signUp() {
   const email = $('#auth-email').value.trim(), password = $('#auth-password').value;
   if (!email || !password) return alert('Email and password required.');
   if (password.length < 6) return alert('Password must be at least 6 characters.');
+
   const result = await chrome.runtime.sendMessage({ type: 'FIREBASE_SIGN_UP', email, password });
   if (result.success) {
     const { session } = await chrome.storage.local.get(['session']);
     checkAuth(session);
-    alert('Account created and signed in!');
+    // Show verification message
+    const resultEl = $('#reset-result');
+    resultEl.style.display = 'block';
+    resultEl.style.background = '#DCFCE7';
+    resultEl.style.color = '#166534';
+    resultEl.innerHTML = '<strong>Account created!</strong><br>Please check your email to verify your account. You can start using SnapText right away.';
   } else {
     alert(result.error || 'Sign up failed.');
   }
