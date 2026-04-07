@@ -667,6 +667,8 @@
       <div class="sidebar-item" data-view="share">&#128279; Share &amp; Explore</div>
       <div class="sidebar-item" data-view="settings">&#9881; Settings</div>
       <div class="sidebar-item" data-view="account">&#128100; Account</div>
+      <div class="sidebar-section">Teams <button class="add-folder-btn" id="btn-add-team" title="Create or join team">+</button></div>
+      <div id="team-list"></div>
       <div class="sidebar-section">Folders <button class="add-folder-btn" id="btn-add-folder" title="New folder">+</button></div>
       <div id="folder-list"></div>
       <div class="sidebar-footer">
@@ -901,7 +903,9 @@
             <input type="email" class="auth-input" id="auth-email" placeholder="Email address" />
             <input type="password" class="auth-input" id="auth-password" placeholder="Password" />
             <button class="btn btn-primary" style="width:100%;margin-bottom:8px;justify-content:center;" id="btn-signin">Sign In</button>
-            <button class="btn" style="width:100%;justify-content:center;" id="btn-signup">Create Account</button>
+            <button class="btn" style="width:100%;margin-bottom:8px;justify-content:center;" id="btn-signup">Create Account</button>
+            <a href="#" id="btn-forgot-password" style="font-size:12px;color:var(--blue);text-decoration:none;">Forgot password?</a>
+            <div id="reset-result" style="display:none;margin-top:12px;font-size:13px;padding:10px;border-radius:6px;"></div>
           </div>
         </div>
         <div id="auth-logged-in" style="display:none;">
@@ -912,6 +916,29 @@
             <button class="btn btn-danger" style="width:100%;justify-content:center;" id="btn-signout">Sign Out</button>
           </div>
         </div>
+      </div>
+
+      <!-- TEAM VIEW -->
+      <div id="view-team" style="display:none;">
+        <div class="topbar">
+          <h2 id="team-view-title">Team</h2>
+          <div style="display:flex;gap:8px;">
+            <button class="btn" id="btn-team-settings">&#9881; Settings</button>
+            <button class="btn btn-primary" id="btn-new-team-macro">+ New Macro</button>
+          </div>
+        </div>
+
+        <div class="stats-row" id="team-stats-row">
+          <div class="stat-card"><div class="label">Team Macros</div><div class="value" id="team-stat-total">0</div></div>
+          <div class="stat-card"><div class="label">Members</div><div class="value" id="team-stat-members">0</div></div>
+          <div class="stat-card"><div class="label">Your Role</div><div class="value" id="team-stat-role" style="font-size:16px;text-transform:capitalize;">—</div></div>
+          <div class="stat-card"><div class="label">Join Code</div><div class="value" id="team-stat-code" style="font-size:16px;font-family:monospace;cursor:pointer;" title="Click to copy">—</div></div>
+        </div>
+
+        <div class="search-row">
+          <input type="text" class="search-input" id="team-search" placeholder="Search team macros..." />
+        </div>
+        <div id="team-macro-table-wrap"></div>
       </div>
     </div>
   </div>
@@ -985,6 +1012,125 @@
   </div>
 
   <input type="file" id="file-import" accept=".json,.csv" style="display:none;" />
+
+  <!-- Team create/join modal -->
+  <div class="modal-overlay" id="modal-team">
+    <div class="modal" style="width:420px;">
+      <div class="modal-header">
+        <h3 id="team-modal-title">Teams</h3>
+        <button class="modal-close" id="team-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="share-tabs" style="margin-bottom:16px;border-bottom:2px solid var(--border);">
+          <div class="share-tab active" data-team-tab="create">Create Team</div>
+          <div class="share-tab" data-team-tab="join">Join Team</div>
+        </div>
+
+        <div id="team-tab-create">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+            Create a new team workspace to collaborate on macros with others. You'll be the owner.
+          </p>
+          <div class="form-group">
+            <label>Team name</label>
+            <input type="text" id="team-create-name" placeholder="e.g. Marketing Team, Support Squad" />
+          </div>
+          <button class="btn btn-primary" id="btn-create-team" style="width:100%;">Create Team</button>
+          <div id="team-create-result" style="display:none;margin-top:12px;"></div>
+        </div>
+
+        <div id="team-tab-join" style="display:none;">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+            Enter a 6-character team code to join an existing team.
+          </p>
+          <div class="form-group">
+            <label>Team code</label>
+            <input type="text" id="team-join-code" placeholder="e.g. ABC123" style="font-family:monospace;font-size:18px;text-align:center;letter-spacing:3px;text-transform:uppercase;" maxlength="6" />
+          </div>
+          <button class="btn btn-primary" id="btn-join-team" style="width:100%;">Join Team</button>
+          <div id="team-join-result" style="display:none;margin-top:12px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team settings modal -->
+  <div class="modal-overlay" id="modal-team-settings">
+    <div class="modal" style="width:520px;">
+      <div class="modal-header">
+        <h3 id="team-settings-title">Team Settings</h3>
+        <button class="modal-close" id="team-settings-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section" style="margin-bottom:16px;">
+          <h3 style="font-size:14px;">Team Info</h3>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+            <div style="flex:1;">
+              <div class="setting-label" style="margin-bottom:4px;">Team Name</div>
+              <div id="team-settings-name" style="font-size:16px;font-weight:600;">—</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="setting-label" style="margin-bottom:4px;">Join Code</div>
+              <div id="team-settings-code" style="font-family:monospace;font-size:18px;font-weight:700;color:var(--blue);cursor:pointer;" title="Click to copy">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-bottom:16px;">
+          <h3 style="font-size:14px;">Members (<span id="team-member-count">0</span>)</h3>
+          <div id="team-members-list" style="margin-top:10px;max-height:200px;overflow-y:auto;"></div>
+        </div>
+
+        <div id="team-danger-zone" style="display:none;">
+          <div class="settings-section" style="border-color:var(--danger);background:var(--danger-bg);">
+            <h3 style="font-size:14px;color:var(--danger);">Danger Zone</h3>
+            <p style="font-size:12px;color:var(--text-muted);margin:8px 0;">
+              Deleting the team will remove all team macros and memberships. This cannot be undone.
+            </p>
+            <button class="btn btn-danger" id="btn-delete-team">Delete Team</button>
+          </div>
+        </div>
+
+        <div id="team-leave-zone">
+          <button class="btn btn-danger" id="btn-leave-team" style="width:100%;justify-content:center;">Leave Team</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team macro editor modal -->
+  <div class="modal-overlay" id="modal-team-macro">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="team-macro-modal-title">New Team Macro</h3>
+        <button class="modal-close" id="team-macro-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Trigger</label>
+          <input type="text" id="team-macro-trigger" placeholder="e.g. sig, addr, reply" />
+          <div class="form-hint">Type <code>;</code><em>trigger</em> then Space to expand</div>
+          <div class="form-error" id="team-trigger-error">A macro with this trigger already exists in this team.</div>
+        </div>
+        <div class="form-group">
+          <label>Expansion body</label>
+          <textarea id="team-macro-body" placeholder="The text that will be inserted..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Preview</label>
+          <div class="preview-pane" id="team-macro-preview">Type in the body above to see a preview...</div>
+        </div>
+        <div class="form-group">
+          <label>Folder</label>
+          <input type="text" id="team-macro-folder" placeholder="e.g. Email, Support" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="team-macro-modal-cancel">Cancel</button>
+        <button class="btn btn-danger" id="team-macro-modal-delete" style="display:none;">Delete</button>
+        <button class="btn btn-primary" id="team-macro-modal-save">Save Macro</button>
+      </div>
+    </div>
+  </div>
 
   <script src="dashboard.js"></script>
 </body>

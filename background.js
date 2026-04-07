@@ -185,6 +185,33 @@ async function firebaseSignIn(email, password) {
   }
 }
 
+async function firebaseResetPassword(email) {
+  try {
+    const response = await fetch(`${FIREBASE_AUTH_URL}/accounts:sendOobCode?key=${FIREBASE_CONFIG.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requestType: 'PASSWORD_RESET',
+        email
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      const message = error.error?.message || 'Failed to send reset email';
+      // Provide user-friendly messages
+      if (message.includes('EMAIL_NOT_FOUND')) {
+        return { success: false, error: 'No account found with this email address.' };
+      }
+      return { success: false, error: message };
+    }
+
+    return { success: true, message: 'Password reset email sent. Check your inbox.' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 async function firebaseRefreshToken(refreshToken) {
   try {
     const response = await fetch(FIREBASE_SECURE_TOKEN_URL, {
@@ -789,6 +816,447 @@ async function deleteShare(shareId) {
   return { success: result };
 }
 
+// ── Team Workspaces ──────────────────────────────────────────────────────
+function generateTeamCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+async function createTeam(name) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  const teamId = 'team-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+  const joinCode = generateTeamCode();
+
+  const teamData = {
+    name,
+    owner_id: session.localId,
+    join_code: joinCode,
+    created_at: Date.now(),
+    updated_at: Date.now()
+  };
+
+  const result = await firestoreSet('teams', teamId, teamData, session.idToken);
+  if (!result) return { success: false, error: 'Failed to create team' };
+
+  // Add owner as first member
+  const memberId = 'member-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  await firestoreSet('team_members', memberId, {
+    team_id: teamId,
+    user_id: session.localId,
+    email: session.email,
+    role: 'owner',
+    joined_at: Date.now()
+  }, session.idToken);
+
+  return { success: true, team: { id: teamId, ...teamData } };
+}
+
+async function getMyTeams() {
+  const session = await getValidSession();
+  if (!session) return [];
+
+  // Get all memberships for this user
+  const membershipFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'user_id' },
+      op: 'EQUAL',
+      value: { stringValue: session.localId }
+    }
+  }];
+
+  const memberships = await firestoreQuery('team_members', membershipFilters, session.idToken);
+  if (!memberships || memberships.length === 0) return [];
+
+  // Get team details for each membership
+  const teams = [];
+  for (const membership of memberships) {
+    const team = await firestoreGet('teams', membership.team_id, session.idToken);
+    if (team) {
+      teams.push({
+        ...team,
+        role: membership.role,
+        joinedAt: membership.joined_at
+      });
+    }
+  }
+
+  return teams;
+}
+
+async function getTeamDetails(teamId) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  const team = await firestoreGet('teams', teamId, session.idToken);
+  if (!team) return { success: false, error: 'Team not found' };
+
+  // Get members
+  const memberFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }];
+  const members = await firestoreQuery('team_members', memberFilters, session.idToken);
+
+  // Get team macros
+  const macroFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }];
+  const macros = await firestoreQuery('team_macros', macroFilters, session.idToken);
+
+  return {
+    success: true,
+    team,
+    members: members || [],
+    macros: (macros || []).map(m => ({
+      id: m.id,
+      trigger: m.trigger,
+      body: m.body,
+      folder: m.folder || 'General',
+      enabled: m.enabled !== false,
+      createdBy: m.created_by,
+      updatedBy: m.updated_by,
+      createdAt: m.created_at,
+      updatedAt: m.updated_at
+    }))
+  };
+}
+
+async function joinTeamByCode(joinCode) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  // Find team by join code
+  const teamFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'join_code' },
+      op: 'EQUAL',
+      value: { stringValue: joinCode.toUpperCase() }
+    }
+  }];
+  const teams = await firestoreQuery('teams', teamFilters, session.idToken);
+  if (!teams || teams.length === 0) {
+    return { success: false, error: 'Invalid team code' };
+  }
+
+  const team = teams[0];
+
+  // Check if already a member
+  const memberFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: team.id }
+    }
+  }, {
+    fieldFilter: {
+      field: { fieldPath: 'user_id' },
+      op: 'EQUAL',
+      value: { stringValue: session.localId }
+    }
+  }];
+  const existing = await firestoreQuery('team_members', memberFilters, session.idToken);
+  if (existing && existing.length > 0) {
+    return { success: false, error: 'Already a member of this team' };
+  }
+
+  // Add as member
+  const memberId = 'member-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  await firestoreSet('team_members', memberId, {
+    team_id: team.id,
+    user_id: session.localId,
+    email: session.email,
+    role: 'member',
+    joined_at: Date.now()
+  }, session.idToken);
+
+  return { success: true, team: { id: team.id, name: team.name } };
+}
+
+async function leaveTeam(teamId) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  // Find membership
+  const memberFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }, {
+    fieldFilter: {
+      field: { fieldPath: 'user_id' },
+      op: 'EQUAL',
+      value: { stringValue: session.localId }
+    }
+  }];
+  const memberships = await firestoreQuery('team_members', memberFilters, session.idToken);
+  if (!memberships || memberships.length === 0) {
+    return { success: false, error: 'Not a member of this team' };
+  }
+
+  const membership = memberships[0];
+  if (membership.role === 'owner') {
+    return { success: false, error: 'Owners cannot leave. Transfer ownership or delete the team.' };
+  }
+
+  await firestoreDelete('team_members', membership.id, session.idToken);
+  return { success: true };
+}
+
+async function deleteTeam(teamId) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  // Verify ownership
+  const team = await firestoreGet('teams', teamId, session.idToken);
+  if (!team) return { success: false, error: 'Team not found' };
+  if (team.owner_id !== session.localId) {
+    return { success: false, error: 'Only the owner can delete the team' };
+  }
+
+  // Delete all members
+  const memberFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }];
+  const members = await firestoreQuery('team_members', memberFilters, session.idToken);
+  for (const member of (members || [])) {
+    await firestoreDelete('team_members', member.id, session.idToken);
+  }
+
+  // Delete all team macros
+  const macroFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }];
+  const macros = await firestoreQuery('team_macros', macroFilters, session.idToken);
+  for (const macro of (macros || [])) {
+    await firestoreDelete('team_macros', macro.id, session.idToken);
+  }
+
+  // Delete team
+  await firestoreDelete('teams', teamId, session.idToken);
+  return { success: true };
+}
+
+async function removeMember(teamId, memberId) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  // Verify admin/owner role
+  const memberFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }, {
+    fieldFilter: {
+      field: { fieldPath: 'user_id' },
+      op: 'EQUAL',
+      value: { stringValue: session.localId }
+    }
+  }];
+  const myMembership = await firestoreQuery('team_members', memberFilters, session.idToken);
+  if (!myMembership || myMembership.length === 0) {
+    return { success: false, error: 'Not a member of this team' };
+  }
+  if (!['owner', 'admin'].includes(myMembership[0].role)) {
+    return { success: false, error: 'Only admins can remove members' };
+  }
+
+  // Get target member
+  const targetMember = await firestoreGet('team_members', memberId, session.idToken);
+  if (!targetMember || targetMember.team_id !== teamId) {
+    return { success: false, error: 'Member not found' };
+  }
+  if (targetMember.role === 'owner') {
+    return { success: false, error: 'Cannot remove the owner' };
+  }
+
+  await firestoreDelete('team_members', memberId, session.idToken);
+  return { success: true };
+}
+
+async function updateMemberRole(teamId, memberId, newRole) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  if (!['admin', 'member'].includes(newRole)) {
+    return { success: false, error: 'Invalid role' };
+  }
+
+  // Verify owner role
+  const team = await firestoreGet('teams', teamId, session.idToken);
+  if (!team || team.owner_id !== session.localId) {
+    return { success: false, error: 'Only the owner can change roles' };
+  }
+
+  const targetMember = await firestoreGet('team_members', memberId, session.idToken);
+  if (!targetMember || targetMember.team_id !== teamId) {
+    return { success: false, error: 'Member not found' };
+  }
+  if (targetMember.role === 'owner') {
+    return { success: false, error: 'Cannot change owner role' };
+  }
+
+  await firestoreSet('team_members', memberId, {
+    ...targetMember,
+    role: newRole
+  }, session.idToken);
+
+  return { success: true };
+}
+
+// ── Team Macros ──────────────────────────────────────────────────────────
+async function saveTeamMacro(teamId, macro) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  // Verify membership
+  const memberFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }, {
+    fieldFilter: {
+      field: { fieldPath: 'user_id' },
+      op: 'EQUAL',
+      value: { stringValue: session.localId }
+    }
+  }];
+  const membership = await firestoreQuery('team_members', memberFilters, session.idToken);
+  if (!membership || membership.length === 0) {
+    return { success: false, error: 'Not a member of this team' };
+  }
+
+  const macroId = macro.id || ('tmacro-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6));
+  const isNew = !macro.id;
+
+  const macroData = {
+    team_id: teamId,
+    trigger: macro.trigger,
+    body: macro.body,
+    folder: macro.folder || 'General',
+    enabled: macro.enabled !== false,
+    created_by: isNew ? session.localId : (macro.createdBy || session.localId),
+    updated_by: session.localId,
+    created_at: isNew ? Date.now() : (macro.createdAt || Date.now()),
+    updated_at: Date.now()
+  };
+
+  await firestoreSet('team_macros', macroId, macroData, session.idToken);
+  return { success: true, macro: { id: macroId, ...macroData } };
+}
+
+async function deleteTeamMacro(teamId, macroId) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  // Verify membership with edit rights
+  const memberFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }, {
+    fieldFilter: {
+      field: { fieldPath: 'user_id' },
+      op: 'EQUAL',
+      value: { stringValue: session.localId }
+    }
+  }];
+  const membership = await firestoreQuery('team_members', memberFilters, session.idToken);
+  if (!membership || membership.length === 0) {
+    return { success: false, error: 'Not a member of this team' };
+  }
+
+  // Get macro to check ownership
+  const macro = await firestoreGet('team_macros', macroId, session.idToken);
+  if (!macro || macro.team_id !== teamId) {
+    return { success: false, error: 'Macro not found' };
+  }
+
+  // Members can only delete their own macros, admins/owners can delete any
+  if (membership[0].role === 'member' && macro.created_by !== session.localId) {
+    return { success: false, error: 'Cannot delete macros created by others' };
+  }
+
+  await firestoreDelete('team_macros', macroId, session.idToken);
+  return { success: true };
+}
+
+async function getTeamMacros(teamId) {
+  const session = await getValidSession();
+  if (!session) return { success: false, error: 'Sign in required' };
+
+  // Verify membership
+  const memberFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }, {
+    fieldFilter: {
+      field: { fieldPath: 'user_id' },
+      op: 'EQUAL',
+      value: { stringValue: session.localId }
+    }
+  }];
+  const membership = await firestoreQuery('team_members', memberFilters, session.idToken);
+  if (!membership || membership.length === 0) {
+    return { success: false, error: 'Not a member of this team' };
+  }
+
+  const macroFilters = [{
+    fieldFilter: {
+      field: { fieldPath: 'team_id' },
+      op: 'EQUAL',
+      value: { stringValue: teamId }
+    }
+  }];
+  const macros = await firestoreQuery('team_macros', macroFilters, session.idToken);
+
+  return {
+    success: true,
+    macros: (macros || []).map(m => ({
+      id: m.id,
+      trigger: m.trigger,
+      body: m.body,
+      folder: m.folder || 'General',
+      enabled: m.enabled !== false,
+      createdBy: m.created_by,
+      updatedBy: m.updated_by,
+      createdAt: m.created_at,
+      updatedAt: m.updated_at
+    }))
+  };
+}
+
 // ── Export helpers ───────────────────────────────────────────────────────
 function macrosToCSV(macrosList) {
   const header = 'trigger,body,folder,enabled,useCount';
@@ -926,6 +1394,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === 'FIREBASE_SIGN_OUT') {
     firebaseSignOut().then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'FIREBASE_RESET_PASSWORD') {
+    firebaseResetPassword(msg.email).then(r => sendResponse(r));
     return true;
   }
 
@@ -1084,6 +1557,62 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ isOnline: result.isOnline !== false });
       });
     });
+    return true;
+  }
+
+  // Team operations
+  if (msg.type === 'CREATE_TEAM') {
+    createTeam(msg.name).then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'GET_MY_TEAMS') {
+    getMyTeams().then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'GET_TEAM_DETAILS') {
+    getTeamDetails(msg.teamId).then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'JOIN_TEAM') {
+    joinTeamByCode(msg.joinCode).then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'LEAVE_TEAM') {
+    leaveTeam(msg.teamId).then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'DELETE_TEAM') {
+    deleteTeam(msg.teamId).then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'REMOVE_MEMBER') {
+    removeMember(msg.teamId, msg.memberId).then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'UPDATE_MEMBER_ROLE') {
+    updateMemberRole(msg.teamId, msg.memberId, msg.role).then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'SAVE_TEAM_MACRO') {
+    saveTeamMacro(msg.teamId, msg.macro).then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'DELETE_TEAM_MACRO') {
+    deleteTeamMacro(msg.teamId, msg.macroId).then(r => sendResponse(r));
+    return true;
+  }
+
+  if (msg.type === 'GET_TEAM_MACROS') {
+    getTeamMacros(msg.teamId).then(r => sendResponse(r));
     return true;
   }
 });

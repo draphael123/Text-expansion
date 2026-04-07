@@ -797,6 +797,37 @@ async function syncNow() {
   }
 }
 
+async function resetPassword(e) {
+  e.preventDefault();
+  const email = $('#auth-email').value.trim();
+  const resultEl = $('#reset-result');
+
+  if (!email) {
+    resultEl.style.display = 'block';
+    resultEl.style.background = '#FEE2E2';
+    resultEl.style.color = '#DC2626';
+    resultEl.textContent = 'Please enter your email address above.';
+    return;
+  }
+
+  resultEl.style.display = 'block';
+  resultEl.style.background = '#F1F5F9';
+  resultEl.style.color = '#64748B';
+  resultEl.textContent = 'Sending reset email...';
+
+  const result = await chrome.runtime.sendMessage({ type: 'FIREBASE_RESET_PASSWORD', email });
+
+  if (result.success) {
+    resultEl.style.background = '#DCFCE7';
+    resultEl.style.color = '#166534';
+    resultEl.textContent = result.message;
+  } else {
+    resultEl.style.background = '#FEE2E2';
+    resultEl.style.color = '#DC2626';
+    resultEl.textContent = result.error;
+  }
+}
+
 // ── Settings ────────────────────────────────────────────────────────
 let currentShortcut = { ctrlKey: true, shiftKey: true, code: 'Space' };
 let recordingShortcut = false;
@@ -902,15 +933,6 @@ async function saveSettings() {
 }
 
 // ── View switching ──────────────────────────────────────────────────
-function showView(view) {
-  ['macros', 'share', 'settings', 'account'].forEach(v => {
-    const el = $(`#view-${v}`);
-    if (el) el.style.display = v === view ? 'block' : 'none';
-  });
-  if (view !== 'macros') $('#stats-row').style.display = 'none';
-  else $('#stats-row').style.display = '';
-}
-
 function showShareTab(tab) {
   ['publish', 'import', 'explore', 'my-shares'].forEach(t => {
     const el = $(`#stab-${t}`);
@@ -990,6 +1012,7 @@ $('#btn-signin').addEventListener('click', signIn);
 $('#btn-signup').addEventListener('click', signUp);
 $('#btn-signout').addEventListener('click', signOut);
 $('#btn-sync-now').addEventListener('click', syncNow);
+$('#btn-forgot-password').addEventListener('click', resetPassword);
 $('#btn-save-settings').addEventListener('click', saveSettings);
 
 // Shortcut recording
@@ -1009,6 +1032,436 @@ $('#btn-dismiss-conflict').addEventListener('click', async () => {
 // Modal dismiss
 $('#modal-macro').addEventListener('click', (e) => { if (e.target === $('#modal-macro')) closeMacroModal(); });
 $('#modal-folder').addEventListener('click', (e) => { if (e.target === $('#modal-folder')) closeFolderModal(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMacroModal(); closeFolderModal(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMacroModal(); closeFolderModal(); closeTeamModal(); closeTeamSettingsModal(); closeTeamMacroModal(); } });
+
+// ── Team Workspaces ─────────────────────────────────────────────────────
+let teams = [];
+let currentTeam = null;
+let currentTeamDetails = null;
+let editingTeamMacroId = null;
+
+async function loadTeams() {
+  const session = await chrome.runtime.sendMessage({ type: 'FIREBASE_GET_SESSION' });
+  if (!session?.session) return;
+  teams = await chrome.runtime.sendMessage({ type: 'GET_MY_TEAMS' }) || [];
+  renderTeamList();
+}
+
+function renderTeamList() {
+  const tl = $('#team-list');
+  if (!tl) return;
+  if (teams.length === 0) {
+    tl.innerHTML = '<div style="padding:4px 16px;font-size:11px;color:var(--text-light);">No teams yet</div>';
+    return;
+  }
+  tl.innerHTML = teams.map(t => {
+    const active = currentTeam?.id === t.id ? 'active' : '';
+    const roleIcon = t.role === 'owner' ? '&#128081;' : (t.role === 'admin' ? '&#11088;' : '');
+    return `<div class="sidebar-item ${active}" data-team="${esc(t.id)}">
+      &#128101; ${esc(t.name)} ${roleIcon}
+    </div>`;
+  }).join('');
+
+  tl.querySelectorAll('[data-team]').forEach(el => {
+    el.addEventListener('click', () => selectTeam(el.dataset.team));
+  });
+}
+
+async function selectTeam(teamId) {
+  currentTeam = teams.find(t => t.id === teamId);
+  if (!currentTeam) return;
+
+  $$('.sidebar-item').forEach(i => i.classList.remove('active'));
+  $(`[data-team="${teamId}"]`)?.classList.add('active');
+
+  // Load team details
+  const result = await chrome.runtime.sendMessage({ type: 'GET_TEAM_DETAILS', teamId });
+  if (!result.success) {
+    alert(result.error || 'Failed to load team');
+    return;
+  }
+  currentTeamDetails = result;
+
+  // Show team view
+  showView('team');
+  renderTeamView();
+}
+
+function showView(view) {
+  ['macros', 'share', 'settings', 'account', 'team'].forEach(v => {
+    const el = $(`#view-${v}`);
+    if (el) el.style.display = v === view ? 'block' : 'none';
+  });
+  if (view !== 'macros') $('#stats-row').style.display = 'none';
+  else $('#stats-row').style.display = '';
+}
+
+function renderTeamView() {
+  if (!currentTeam || !currentTeamDetails) return;
+
+  $('#team-view-title').textContent = currentTeam.name;
+  $('#team-stat-total').textContent = currentTeamDetails.macros.length;
+  $('#team-stat-members').textContent = currentTeamDetails.members.length;
+  $('#team-stat-role').textContent = currentTeam.role;
+  $('#team-stat-code').textContent = currentTeamDetails.team.join_code || '—';
+
+  renderTeamMacroTable();
+}
+
+function renderTeamMacroTable() {
+  const q = ($('#team-search')?.value || '').toLowerCase();
+  let filtered = currentTeamDetails?.macros || [];
+  if (q) filtered = filtered.filter(m =>
+    m.trigger.toLowerCase().includes(q) || m.body.toLowerCase().includes(q)
+  );
+
+  const wrap = $('#team-macro-table-wrap');
+  if (!wrap) return;
+
+  if (filtered.length === 0) {
+    wrap.innerHTML = `<div class="empty"><div class="icon">&#128101;</div><p>No team macros yet.</p><button class="btn btn-primary" id="btn-empty-team-macro">+ New Team Macro</button></div>`;
+    const emptyBtn = $('#btn-empty-team-macro');
+    if (emptyBtn) emptyBtn.addEventListener('click', () => openTeamMacroModal());
+    return;
+  }
+
+  wrap.innerHTML = `
+    <table class="macro-table">
+      <thead><tr><th>Trigger</th><th>Body</th><th>Folder</th><th>On</th><th>Actions</th></tr></thead>
+      <tbody>${filtered.map(m => `
+        <tr>
+          <td class="trigger-cell">;${esc(m.trigger)}</td>
+          <td class="body-cell" title="${esc(m.body)}">${esc(m.body)}</td>
+          <td><span class="folder-badge">${esc(m.folder || 'General')}</span></td>
+          <td><label class="toggle-switch"><input type="checkbox" ${m.enabled !== false ? 'checked' : ''} data-team-toggle="${m.id}" /><span class="toggle-slider"></span></label></td>
+          <td><div class="actions-cell"><button class="btn btn-sm" data-edit-team-macro="${m.id}">Edit</button></div></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+
+  wrap.querySelectorAll('[data-team-toggle]').forEach(el => {
+    el.addEventListener('change', async () => {
+      const macro = currentTeamDetails.macros.find(m => m.id === el.dataset.teamToggle);
+      if (macro) {
+        macro.enabled = el.checked;
+        await chrome.runtime.sendMessage({
+          type: 'SAVE_TEAM_MACRO',
+          teamId: currentTeam.id,
+          macro
+        });
+      }
+    });
+  });
+
+  wrap.querySelectorAll('[data-edit-team-macro]').forEach(el => {
+    el.addEventListener('click', () => openTeamMacroModal(el.dataset.editTeamMacro));
+  });
+}
+
+// Team create/join modal
+function openTeamModal() {
+  $('#modal-team').classList.add('visible');
+  $('#team-create-name').value = '';
+  $('#team-join-code').value = '';
+  $('#team-create-result').style.display = 'none';
+  $('#team-join-result').style.display = 'none';
+  setTimeout(() => $('#team-create-name').focus(), 100);
+}
+
+function closeTeamModal() {
+  $('#modal-team').classList.remove('visible');
+}
+
+function showTeamTab(tab) {
+  ['create', 'join'].forEach(t => {
+    const el = $(`#team-tab-${t}`);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  $$('[data-team-tab]').forEach(el => {
+    el.classList.toggle('active', el.dataset.teamTab === tab);
+  });
+}
+
+async function createTeam() {
+  const name = $('#team-create-name').value.trim();
+  if (!name) return alert('Enter a team name.');
+
+  const result = await chrome.runtime.sendMessage({ type: 'CREATE_TEAM', name });
+  const resultEl = $('#team-create-result');
+
+  if (result.success) {
+    resultEl.innerHTML = `<div style="background:var(--success-bg);border:1px solid #A7F3D0;border-radius:8px;padding:12px;font-size:13px;color:#065F46;">
+      Team created! Join code: <strong style="font-family:monospace;font-size:16px;">${result.team.join_code}</strong>
+    </div>`;
+    await loadTeams();
+    selectTeam(result.team.id);
+    setTimeout(closeTeamModal, 2000);
+  } else {
+    resultEl.innerHTML = `<div style="color:var(--danger);font-size:13px;">${result.error}</div>`;
+  }
+  resultEl.style.display = 'block';
+}
+
+async function joinTeam() {
+  const code = $('#team-join-code').value.trim().toUpperCase();
+  if (!code) return alert('Enter a team code.');
+
+  const result = await chrome.runtime.sendMessage({ type: 'JOIN_TEAM', joinCode: code });
+  const resultEl = $('#team-join-result');
+
+  if (result.success) {
+    resultEl.innerHTML = `<div style="background:var(--success-bg);border:1px solid #A7F3D0;border-radius:8px;padding:12px;font-size:13px;color:#065F46;">
+      Joined team "${esc(result.team.name)}"!
+    </div>`;
+    await loadTeams();
+    const team = teams.find(t => t.id === result.team.id);
+    if (team) selectTeam(team.id);
+    setTimeout(closeTeamModal, 2000);
+  } else {
+    resultEl.innerHTML = `<div style="color:var(--danger);font-size:13px;">${result.error}</div>`;
+  }
+  resultEl.style.display = 'block';
+}
+
+// Team settings modal
+function openTeamSettingsModal() {
+  if (!currentTeam || !currentTeamDetails) return;
+
+  $('#team-settings-title').textContent = `${currentTeam.name} Settings`;
+  $('#team-settings-name').textContent = currentTeam.name;
+  $('#team-settings-code').textContent = currentTeamDetails.team.join_code || '—';
+  $('#team-member-count').textContent = currentTeamDetails.members.length;
+
+  // Render members
+  const membersList = $('#team-members-list');
+  membersList.innerHTML = currentTeamDetails.members.map(m => {
+    const roleIcon = m.role === 'owner' ? '&#128081;' : (m.role === 'admin' ? '&#11088;' : '&#128100;');
+    const canRemove = currentTeam.role === 'owner' || (currentTeam.role === 'admin' && m.role === 'member');
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:18px;">${roleIcon}</span>
+        <div>
+          <div style="font-size:13px;font-weight:500;">${esc(m.email)}</div>
+          <div style="font-size:11px;color:var(--text-light);text-transform:capitalize;">${m.role}</div>
+        </div>
+      </div>
+      ${canRemove && m.role !== 'owner' ? `<button class="btn btn-sm btn-danger" data-remove-member="${m.id}" title="Remove">&#10005;</button>` : ''}
+    </div>`;
+  }).join('');
+
+  // Remove member handlers
+  membersList.querySelectorAll('[data-remove-member]').forEach(el => {
+    el.addEventListener('click', async () => {
+      if (!confirm('Remove this member from the team?')) return;
+      const result = await chrome.runtime.sendMessage({
+        type: 'REMOVE_MEMBER',
+        teamId: currentTeam.id,
+        memberId: el.dataset.removeMember
+      });
+      if (result.success) {
+        await selectTeam(currentTeam.id);
+        openTeamSettingsModal();
+      } else {
+        alert(result.error);
+      }
+    });
+  });
+
+  // Show/hide danger zone based on role
+  $('#team-danger-zone').style.display = currentTeam.role === 'owner' ? 'block' : 'none';
+  $('#team-leave-zone').style.display = currentTeam.role !== 'owner' ? 'block' : 'none';
+
+  $('#modal-team-settings').classList.add('visible');
+}
+
+function closeTeamSettingsModal() {
+  $('#modal-team-settings').classList.remove('visible');
+}
+
+async function deleteTeam() {
+  if (!confirm('Are you sure you want to delete this team? This cannot be undone.')) return;
+  if (!confirm('This will delete all team macros and remove all members. Continue?')) return;
+
+  const result = await chrome.runtime.sendMessage({ type: 'DELETE_TEAM', teamId: currentTeam.id });
+  if (result.success) {
+    closeTeamSettingsModal();
+    currentTeam = null;
+    currentTeamDetails = null;
+    await loadTeams();
+    showView('macros');
+    renderMacroTable();
+  } else {
+    alert(result.error);
+  }
+}
+
+async function leaveTeam() {
+  if (!confirm('Are you sure you want to leave this team?')) return;
+
+  const result = await chrome.runtime.sendMessage({ type: 'LEAVE_TEAM', teamId: currentTeam.id });
+  if (result.success) {
+    closeTeamSettingsModal();
+    currentTeam = null;
+    currentTeamDetails = null;
+    await loadTeams();
+    showView('macros');
+    renderMacroTable();
+  } else {
+    alert(result.error);
+  }
+}
+
+// Team macro modal
+function openTeamMacroModal(id) {
+  editingTeamMacroId = id || null;
+  $('#team-trigger-error').classList.remove('visible');
+
+  if (id) {
+    const m = currentTeamDetails?.macros.find(x => x.id === id);
+    if (!m) return;
+    $('#team-macro-modal-title').textContent = 'Edit Team Macro';
+    $('#team-macro-trigger').value = m.trigger;
+    $('#team-macro-body').value = m.body;
+    $('#team-macro-folder').value = m.folder || '';
+    $('#team-macro-modal-delete').style.display = 'inline-flex';
+    updateTeamMacroPreview();
+  } else {
+    $('#team-macro-modal-title').textContent = 'New Team Macro';
+    $('#team-macro-trigger').value = '';
+    $('#team-macro-body').value = '';
+    $('#team-macro-folder').value = '';
+    $('#team-macro-modal-delete').style.display = 'none';
+    $('#team-macro-preview').textContent = 'Type in the body above to see a preview...';
+  }
+  $('#modal-team-macro').classList.add('visible');
+  setTimeout(() => $('#team-macro-trigger').focus(), 100);
+}
+
+function closeTeamMacroModal() {
+  $('#modal-team-macro').classList.remove('visible');
+  editingTeamMacroId = null;
+}
+
+function updateTeamMacroPreview() {
+  const body = $('#team-macro-body').value;
+  const preview = $('#team-macro-preview');
+  if (!body) {
+    preview.textContent = 'Type in the body above to see a preview...';
+    return;
+  }
+  let text = body
+    .replace(/\{\{date\}\}/gi, new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))
+    .replace(/\{\{time\}\}/gi, new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }))
+    .replace(/\{\{clipboard\}\}/gi, '[clipboard]')
+    .replace(/\{\{cursor\}\}/gi, '|')
+    .replace(/\{\{input:([^}]+)\}\}/gi, '[$1]');
+  preview.textContent = text;
+}
+
+function checkTeamDuplicate() {
+  const trigger = $('#team-macro-trigger').value.trim().replace(/^;/, '').toLowerCase();
+  const existing = currentTeamDetails?.macros.find(m => m.trigger.toLowerCase() === trigger && m.id !== editingTeamMacroId);
+  if (existing) {
+    $('#team-trigger-error').classList.add('visible');
+    return true;
+  }
+  $('#team-trigger-error').classList.remove('visible');
+  return false;
+}
+
+async function saveTeamMacro() {
+  const trigger = $('#team-macro-trigger').value.trim().replace(/^;/, '');
+  const body = $('#team-macro-body').value;
+  const folder = $('#team-macro-folder').value.trim() || 'General';
+
+  if (!trigger || !body) return alert('Trigger and body are required.');
+  if (checkTeamDuplicate()) return alert('A macro with this trigger already exists in this team.');
+
+  const macro = editingTeamMacroId
+    ? { ...currentTeamDetails.macros.find(m => m.id === editingTeamMacroId), trigger, body, folder }
+    : { trigger, body, folder, enabled: true };
+
+  const result = await chrome.runtime.sendMessage({
+    type: 'SAVE_TEAM_MACRO',
+    teamId: currentTeam.id,
+    macro
+  });
+
+  if (result.success) {
+    closeTeamMacroModal();
+    await selectTeam(currentTeam.id);
+  } else {
+    alert(result.error);
+  }
+}
+
+async function deleteTeamMacro() {
+  if (!editingTeamMacroId || !confirm('Delete this team macro?')) return;
+
+  const result = await chrome.runtime.sendMessage({
+    type: 'DELETE_TEAM_MACRO',
+    teamId: currentTeam.id,
+    macroId: editingTeamMacroId
+  });
+
+  if (result.success) {
+    closeTeamMacroModal();
+    await selectTeam(currentTeam.id);
+  } else {
+    alert(result.error);
+  }
+}
+
+// Team event bindings
+$('#btn-add-team').addEventListener('click', openTeamModal);
+$('#team-modal-close').addEventListener('click', closeTeamModal);
+$$('[data-team-tab]').forEach(el => {
+  el.addEventListener('click', () => showTeamTab(el.dataset.teamTab));
+});
+$('#btn-create-team').addEventListener('click', createTeam);
+$('#btn-join-team').addEventListener('click', joinTeam);
+$('#team-create-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') createTeam(); });
+$('#team-join-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinTeam(); });
+
+$('#btn-team-settings').addEventListener('click', openTeamSettingsModal);
+$('#team-settings-close').addEventListener('click', closeTeamSettingsModal);
+$('#btn-delete-team').addEventListener('click', deleteTeam);
+$('#btn-leave-team').addEventListener('click', leaveTeam);
+
+$('#btn-new-team-macro').addEventListener('click', () => openTeamMacroModal());
+$('#team-macro-modal-close').addEventListener('click', closeTeamMacroModal);
+$('#team-macro-modal-cancel').addEventListener('click', closeTeamMacroModal);
+$('#team-macro-modal-save').addEventListener('click', saveTeamMacro);
+$('#team-macro-modal-delete').addEventListener('click', deleteTeamMacro);
+$('#team-macro-body').addEventListener('input', updateTeamMacroPreview);
+$('#team-macro-trigger').addEventListener('input', checkTeamDuplicate);
+$('#team-search').addEventListener('input', renderTeamMacroTable);
+
+$('#modal-team').addEventListener('click', (e) => { if (e.target === $('#modal-team')) closeTeamModal(); });
+$('#modal-team-settings').addEventListener('click', (e) => { if (e.target === $('#modal-team-settings')) closeTeamSettingsModal(); });
+$('#modal-team-macro').addEventListener('click', (e) => { if (e.target === $('#modal-team-macro')) closeTeamMacroModal(); });
+
+// Copy team code on click
+$('#team-stat-code').addEventListener('click', () => {
+  const code = $('#team-stat-code').textContent;
+  if (code && code !== '—') {
+    navigator.clipboard.writeText(code);
+    showToast('Team code copied!');
+  }
+});
+$('#team-settings-code').addEventListener('click', () => {
+  const code = $('#team-settings-code').textContent;
+  if (code && code !== '—') {
+    navigator.clipboard.writeText(code);
+    showToast('Team code copied!');
+  }
+});
+
+// Override init to include teams
+const originalInit = init;
+async function init() {
+  await originalInit();
+  await loadTeams();
+}
 
 init();

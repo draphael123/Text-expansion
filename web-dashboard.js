@@ -121,6 +121,29 @@ async function firebaseSignIn(email, password) {
   }
 }
 
+async function firebaseResetPassword(email) {
+  try {
+    const response = await fetch(`${FIREBASE_AUTH_URL}/accounts:sendOobCode?key=${FIREBASE_CONFIG.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestType: 'PASSWORD_RESET', email })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      const message = error.error?.message || 'Failed to send reset email';
+      if (message.includes('EMAIL_NOT_FOUND')) {
+        return { success: false, error: 'No account found with this email address.' };
+      }
+      return { success: false, error: message };
+    }
+
+    return { success: true, message: 'Password reset email sent. Check your inbox.' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 async function firebaseRefreshToken(refreshToken) {
   try {
     const response = await fetch(FIREBASE_SECURE_TOKEN_URL, {
@@ -1265,6 +1288,37 @@ async function wdSyncNow() {
   }
 }
 
+async function wdResetPassword(e) {
+  e.preventDefault();
+  const email = $('#wd-auth-email').value.trim();
+  const resultEl = $('#wd-reset-result');
+
+  if (!email) {
+    resultEl.style.display = 'block';
+    resultEl.style.background = '#FEE2E2';
+    resultEl.style.color = '#DC2626';
+    resultEl.textContent = 'Please enter your email address above.';
+    return;
+  }
+
+  resultEl.style.display = 'block';
+  resultEl.style.background = '#F1F5F9';
+  resultEl.style.color = '#64748B';
+  resultEl.textContent = 'Sending reset email...';
+
+  const result = await firebaseResetPassword(email);
+
+  if (result.success) {
+    resultEl.style.background = '#DCFCE7';
+    resultEl.style.color = '#166534';
+    resultEl.textContent = result.message;
+  } else {
+    resultEl.style.background = '#FEE2E2';
+    resultEl.style.color = '#DC2626';
+    resultEl.textContent = result.error;
+  }
+}
+
 // ── Export/Import ──────────────────────────────────────────────────────
 function wdExportJSON() {
   const toExport = currentFolder ? macros.filter(m => (m.folder || 'General') === currentFolder) : macros;
@@ -1726,6 +1780,9 @@ function bindWebDashboardEvents() {
 
   const btnSyncNow = $('#wd-btn-sync-now');
   if (btnSyncNow) btnSyncNow.addEventListener('click', wdSyncNow);
+
+  const btnForgotPassword = $('#wd-btn-forgot-password');
+  if (btnForgotPassword) btnForgotPassword.addEventListener('click', wdResetPassword);
 
   // Settings
   const btnSaveSettings = $('#wd-btn-save-settings');
