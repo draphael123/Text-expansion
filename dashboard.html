@@ -360,6 +360,52 @@
     .form-error { font-size: 12px; color: var(--danger); margin-top: 4px; display: none; }
     .form-error.visible { display: block; }
 
+    /* Help icon tooltips */
+    .help-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-left: 6px;
+      transition: all 0.15s;
+      vertical-align: middle;
+    }
+    .help-icon:hover {
+      background: var(--blue-bg);
+      color: var(--blue);
+      border-color: var(--blue-50);
+    }
+    .help-tooltip {
+      display: none;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+      margin-top: 8px;
+      max-width: 320px;
+    }
+    .help-tooltip.visible { display: block; }
+    .help-tooltip code {
+      background: var(--bg-alt);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 11px;
+      color: var(--blue);
+    }
+    .help-tooltip strong { color: var(--text); font-weight: 600; }
+
     .preview-pane {
       background: var(--bg);
       border: 1px solid var(--border);
@@ -670,7 +716,8 @@
       <div class="sidebar-item" data-view="account">&#128100; Account</div>
       <div class="sidebar-section">Teams <button class="add-folder-btn" id="btn-add-team" title="Create or join team">+</button></div>
       <div id="team-list"></div>
-      <div class="sidebar-section">Folders <button class="add-folder-btn" id="btn-add-folder" title="New folder">+</button></div>
+      <div class="sidebar-section">Folders <span class="help-icon" data-help="folders">?</span><button class="add-folder-btn" id="btn-add-folder" title="New folder">+</button></div>
+      <div class="help-tooltip" id="help-folders">Organize your macros into folders like "Work", "Personal", or "Code". Drag macros between folders or assign them when editing. Each folder can be shared separately.</div>
       <div id="folder-list"></div>
       <div class="sidebar-footer">
         <div class="user-info" id="user-info">Not signed in</div>
@@ -741,7 +788,8 @@
         <!-- Publish tab -->
         <div id="stab-publish">
           <div class="settings-section">
-            <h3>Share macros with other users</h3>
+            <h3>Share macros with other users <span class="help-icon" data-help="publish">?</span></h3>
+            <div class="help-tooltip" id="help-publish">Publish a folder to get an 8-character share code. Others can import your macros using this code. <strong>Public</strong> packs appear in the Explore tab for anyone to discover. <strong>Private</strong> packs require the code to import.</div>
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
               Publish a folder as a shareable pack. You'll get a short code that anyone can use to import your macros.
             </p>
@@ -786,13 +834,14 @@
         <!-- Import tab -->
         <div id="stab-import" style="display:none;">
           <div class="settings-section">
-            <h3>Import from a share code</h3>
+            <h3>Import from a share code <span class="help-icon" data-help="import">?</span></h3>
+            <div class="help-tooltip" id="help-import">Enter an 8-character code from another user to import their macros. Imported macros are placed in a new folder named after the pack. You can also paste legacy Base64 export codes from older versions.</div>
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
               Enter an 8-character cloud share code, or paste a legacy Base64 code.
             </p>
             <div class="form-group">
               <label>Share code</label>
-              <input type="text" id="cloud-import-code" placeholder="e.g. AbC3dEfG" style="font-family:monospace;font-size:16px;letter-spacing:1px;text-align:center;" />
+              <input type="text" id="cloud-import-code" placeholder="Enter 8-character code, e.g. AbC3dEfG" style="font-family:monospace;font-size:16px;letter-spacing:1px;text-align:center;" />
             </div>
             <button class="btn btn-primary" id="btn-import-cloud">Import</button>
             <div id="import-result" style="display:none;margin-top:14px;"></div>
@@ -859,13 +908,14 @@
         </div>
 
         <div class="settings-section">
-          <h3>Blocked Sites</h3>
+          <h3>Blocked Sites <span class="help-icon" data-help="blocked">?</span></h3>
+          <div class="help-tooltip" id="help-blocked">SnapText won't expand macros or show the search overlay on these sites. Useful for password managers, banking sites, or anywhere you don't want automatic text replacement.</div>
           <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
             SnapText won't expand macros or show the search overlay on these domains.
           </p>
           <div class="domain-list" id="domain-list"></div>
           <div class="domain-add-row">
-            <input type="text" id="domain-input" placeholder="e.g. bank.com" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;" />
+            <input type="text" id="domain-input" placeholder="e.g. bank.com, 1password.com" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;" />
             <button class="btn btn-sm btn-primary" id="btn-add-domain">Add</button>
           </div>
         </div>
@@ -959,13 +1009,26 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Trigger</label>
-          <input type="text" id="macro-trigger" placeholder="e.g. sig, addr, reply" />
-          <div class="form-hint">Type <code>;</code><em>trigger</em> then Space to expand</div>
+          <input type="text" id="macro-trigger" placeholder="e.g. sig, email, addr (without the ; prefix)" />
+          <div class="form-hint">Type <code>;</code><em>trigger</em> + Space anywhere to expand. Triggers are case-insensitive.</div>
           <div class="form-error" id="trigger-error">A macro with this trigger already exists.</div>
         </div>
         <div class="form-group">
-          <label>Expansion body</label>
-          <textarea id="macro-body" placeholder="The text that will be inserted..."></textarea>
+          <label>Expansion body <span class="help-icon" data-help="variables">?</span></label>
+          <div class="help-tooltip" id="help-variables">
+            <strong>Available variables:</strong><br>
+            <code>{{date}}</code> — Today's date<br>
+            <code>{{time}}</code> — Current time<br>
+            <code>{{date+7}}</code> — Date 7 days from now<br>
+            <code>{{clipboard}}</code> — Paste clipboard contents<br>
+            <code>{{cursor}}</code> — Position cursor here after expansion<br>
+            <code>{{input:Label}}</code> — Prompt for input<br>
+            <code>{{select:a,b,c}}</code> — Show dropdown choices<br>
+            <code>{{random:a,b}}</code> — Pick random option<br>
+            <code>{{calc:1+1}}</code> — Calculate math expression<br>
+            <code>{{macro:trigger}}</code> — Nest another macro
+          </div>
+          <textarea id="macro-body" placeholder="Type your expansion text. Use {{date}}, {{clipboard}}, etc. for dynamic content"></textarea>
           <div class="form-hint">
             Variables: <code>{{date}}</code> <code>{{time}}</code> <code>{{date+7}}</code> <code>{{clipboard}}</code> <code>{{cursor}}</code> <code>{{input:Label}}</code> <code>{{select:a,b}}</code> <code>{{random:a,b}}</code> <code>{{calc:1+1}}</code> <code>{{uppercase}}...{{/uppercase}}</code> <code>{{macro:trigger}}</code>
           </div>
@@ -1006,7 +1069,7 @@
       <div class="modal-body">
         <div class="form-group">
           <label>Folder name</label>
-          <input type="text" id="folder-name-input" placeholder="e.g. Sales, Support, Personal" />
+          <input type="text" id="folder-name-input" placeholder="e.g. Work, Personal, Email Templates, Code Snippets" />
           <div class="form-error" id="folder-error">This folder already exists.</div>
         </div>
       </div>
@@ -1138,6 +1201,23 @@
     </div>
   </div>
 
+  <script>
+    // Help tooltip toggle
+    document.addEventListener('click', (e) => {
+      const helpIcon = e.target.closest('.help-icon');
+      if (helpIcon) {
+        const helpId = helpIcon.dataset.help;
+        const tooltip = document.getElementById('help-' + helpId);
+        if (tooltip) {
+          tooltip.classList.toggle('visible');
+        }
+        e.stopPropagation();
+      } else {
+        // Close all tooltips when clicking outside
+        document.querySelectorAll('.help-tooltip.visible').forEach(t => t.classList.remove('visible'));
+      }
+    });
+  </script>
   <script src="dashboard.js"></script>
 </body>
 </html>
