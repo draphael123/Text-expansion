@@ -1,7 +1,12 @@
 const macroListEl = document.getElementById('macro-list');
 const searchEl = document.getElementById('search');
+const folderFilterEl = document.getElementById('folder-filter');
 const recentSection = document.getElementById('recent-section');
+const quickEditForm = document.getElementById('quick-edit-form');
 let allMacros = [];
+let storedMacros = []; // All macros including disabled
+let currentFolder = '';
+let editingMacroId = null;
 
 // Inline default macros — popup can seed these without background worker
 const POPUP_DEFAULT_MACROS = [
@@ -55,11 +60,17 @@ async function loadMacros() {
     }
   }
 
+  storedMacros = macros;
   allMacros = macros.filter(m => m.enabled !== false);
 
   const today = new Date().toISOString().slice(0, 10);
   document.getElementById('stat-macros').textContent = allMacros.length;
   document.getElementById('stat-expansions').textContent = stats[today] || 0;
+
+  // Populate folder filter
+  const folders = [...new Set(allMacros.map(m => m.folder || 'General'))].sort();
+  folderFilterEl.innerHTML = '<option value="">All Folders</option>' +
+    folders.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
 
   // Recent macros
   const recent = [...allMacros]
@@ -86,10 +97,11 @@ async function loadMacros() {
 
 function macroItemHtml(m) {
   const previewText = m.body.length > 200 ? m.body.substring(0, 200) + '...' : m.body;
-  return `<div class="macro-item" data-id="${m.id}" data-body="${escapeAttr(m.body)}">
+  return `<div class="macro-item" data-id="${m.id}" data-body="${escapeAttr(m.body)}" data-trigger="${escapeAttr(m.trigger)}">
     <span class="macro-trigger">;${escapeHtml(m.trigger)}</span>
     <span class="macro-body">${escapeHtml(m.body)}</span>
     ${m.useCount ? `<span class="macro-count">${m.useCount}x</span>` : ''}
+    <button class="edit-btn" data-edit="${m.id}">Edit</button>
     <div class="macro-preview">${highlightVars(previewText)}</div>
   </div>`;
 }
@@ -105,19 +117,43 @@ function renderMacros(macros) {
 function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escapeAttr(str) { return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-searchEl.addEventListener('input', () => {
+function applyFilters() {
   const q = searchEl.value.toLowerCase();
-  const filtered = allMacros.filter(m =>
-    m.trigger.toLowerCase().includes(q) ||
-    m.body.toLowerCase().includes(q) ||
-    (m.folder || '').toLowerCase().includes(q)
-  );
+  const folder = folderFilterEl.value;
+  let filtered = allMacros;
+
+  if (folder) {
+    filtered = filtered.filter(m => (m.folder || 'General') === folder);
+  }
+
+  if (q) {
+    filtered = filtered.filter(m =>
+      m.trigger.toLowerCase().includes(q) ||
+      m.body.toLowerCase().includes(q) ||
+      (m.folder || '').toLowerCase().includes(q)
+    );
+  }
+
   renderMacros(filtered);
-  recentSection.style.display = q ? 'none' : '';
-  document.getElementById('all-section').style.display = q ? 'none' : '';
-});
+  const hideRecent = q || folder;
+  recentSection.style.display = hideRecent ? 'none' : '';
+  document.getElementById('all-section').style.display = hideRecent ? 'none' : '';
+}
+
+searchEl.addEventListener('input', applyFilters);
+folderFilterEl.addEventListener('change', applyFilters);
 
 document.addEventListener('click', async (e) => {
+  // Handle edit button click
+  const editBtn = e.target.closest('.edit-btn');
+  if (editBtn) {
+    e.stopPropagation();
+    const macroId = editBtn.dataset.edit;
+    openQuickEdit(macroId);
+    return;
+  }
+
+  // Handle macro item click (insert)
   const item = e.target.closest('.macro-item');
   if (!item) return;
   const body = item.dataset.body;
@@ -127,6 +163,50 @@ document.addEventListener('click', async (e) => {
     window.close();
   }
 });
+
+// Quick edit functions
+function openQuickEdit(macroId) {
+  const macro = storedMacros.find(m => m.id === macroId);
+  if (!macro) return;
+
+  editingMacroId = macroId;
+  document.getElementById('quick-edit-trigger').value = macro.trigger;
+  document.getElementById('quick-edit-body').value = macro.body;
+  quickEditForm.classList.add('visible');
+  document.getElementById('quick-edit-trigger').focus();
+}
+
+function closeQuickEdit() {
+  quickEditForm.classList.remove('visible');
+  editingMacroId = null;
+}
+
+async function saveQuickEdit() {
+  if (!editingMacroId) return;
+
+  const trigger = document.getElementById('quick-edit-trigger').value.trim().replace(/^;/, '');
+  const body = document.getElementById('quick-edit-body').value;
+
+  if (!trigger || !body) return;
+
+  const macroIndex = storedMacros.findIndex(m => m.id === editingMacroId);
+  if (macroIndex === -1) return;
+
+  storedMacros[macroIndex].trigger = trigger;
+  storedMacros[macroIndex].body = body;
+  storedMacros[macroIndex].updatedAt = Date.now();
+
+  try {
+    await chrome.storage.local.set({ macros: storedMacros });
+    closeQuickEdit();
+    loadMacros(); // Refresh the list
+  } catch (e) {
+    console.error('[SnapText Popup] Failed to save:', e);
+  }
+}
+
+document.getElementById('quick-edit-cancel').addEventListener('click', closeQuickEdit);
+document.getElementById('quick-edit-save').addEventListener('click', saveQuickEdit);
 
 document.getElementById('btn-dashboard').addEventListener('click', () => {
   chrome.runtime.openOptionsPage(); window.close();

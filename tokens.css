@@ -1,0 +1,366 @@
+/**
+ * SnapText Design Tokens
+ * Shared CSS variables for consistent styling across all pages
+ */
+
+:root {
+  /* ── Primary Colors ─────────────────────────────────── */
+  --blue: #2563EB;
+  --blue-light: #3B82F6;
+  --blue-dark: #1D4ED8;
+  --blue-bg: #DBEAFE;
+  --blue-50: #BFDBFE;
+
+  /* ── Backgrounds ────────────────────────────────────── */
+  --bg: #F8FAFC;
+  --bg-alt: #F1F5F9;
+  --white: #FFFFFF;
+
+  /* ── Text Colors ────────────────────────────────────── */
+  --text: #0F172A;
+  --text-muted: #475569;
+  --text-light: #64748B;
+
+  /* ── Borders ────────────────────────────────────────── */
+  --border: #CBD5E1;
+  --border-light: #E2E8F0;
+
+  /* ── Status Colors ──────────────────────────────────── */
+  --danger: #EF4444;
+  --danger-bg: #FEF2F2;
+  --danger-border: #FECACA;
+  --success: #10B981;
+  --success-bg: #ECFDF5;
+  --success-border: #A7F3D0;
+  --warn: #F59E0B;
+  --warn-bg: #FFFBEB;
+  --warn-border: #FDE68A;
+  --info: #3B82F6;
+  --info-bg: #EFF6FF;
+  --info-border: #BFDBFE;
+
+  /* ── Spacing ────────────────────────────────────────── */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+
+  /* ── Border Radius ──────────────────────────────────── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 24px rgba(15, 23, 42, 0.12);
+  --shadow-xl: 0 24px 48px rgba(15, 23, 42, 0.16);
+  --shadow-modal: 0 24px 48px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.05);
+
+  /* ── Typography ─────────────────────────────────────── */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 28px;
+
+  /* ── Transitions ────────────────────────────────────── */
+  --transition-fast: 0.12s ease-out;
+  --transition-base: 0.2s ease-out;
+  --transition-slow: 0.3s ease-out;
+
+  /* ── Z-Index Scale ──────────────────────────────────── */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal-backdrop: 900;
+  --z-modal: 1000;
+  --z-toast: 1100;
+  --z-tooltip: 1200;
+
+  /* ── Layout ─────────────────────────────────────────── */
+  --sidebar-width: 240px;
+  --topbar-height: 56px;
+}
+
+/* ── Dark Mode ──────────────────────────────────────────── */
+[data-theme="dark"] {
+  --blue: #3B82F6;
+  --blue-light: #60A5FA;
+  --blue-dark: #2563EB;
+  --blue-bg: #1E3A5F;
+  --blue-50: #1E293B;
+
+  --bg: #0F172A;
+  --bg-alt: #1E293B;
+  --white: #1E293B;
+
+  --text: #F1F5F9;
+  --text-muted: #94A3B8;
+  --text-light: #64748B;
+
+  --border: #334155;
+  --border-light: #475569;
+
+  --danger-bg: #450A0A;
+  --danger-border: #7F1D1D;
+  --success-bg: #052E16;
+  --success-border: #166534;
+  --warn-bg: #451A03;
+  --warn-border: #92400E;
+  --info-bg: #1E3A5F;
+  --info-border: #1D4ED8;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 24px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* ── Animations ─────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Skeleton Loader ────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-alt) 0%, var(--border) 50%, var(--bg-alt) 100%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-xs);
+}
+
+.skeleton-text.short { width: 60%; }
+.skeleton-text.medium { width: 80%; }
+.skeleton-text.full { width: 100%; }
+
+.skeleton-card {
+  height: 80px;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-row {
+  height: 48px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Button Loading State ───────────────────────────────── */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 0.6s linear infinite;
+}
+
+.btn-primary.btn-loading::after {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+}
+
+/* ── Toast Notifications ────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--text);
+  color: var(--white);
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp var(--transition-base);
+  pointer-events: auto;
+}
+
+.toast-success {
+  background: var(--success);
+}
+
+.toast-error {
+  background: var(--danger);
+}
+
+.toast-info {
+  background: var(--blue);
+}
+
+.toast-undo {
+  background: none;
+  border: none;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  margin-left: auto;
+}
+
+.toast-undo:hover {
+  opacity: 0.8;
+}
+
+/* ── Tooltip ────────────────────────────────────────────── */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: var(--z-tooltip);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-fast), visibility var(--transition-fast);
+  pointer-events: none;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--text);
+}
+
+.tooltip-wrapper:hover .tooltip,
+.tooltip-wrapper:focus-within .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Tooltip position variants */
+.tooltip.tooltip-bottom {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
+.tooltip.tooltip-bottom::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--text);
+}
+
+/* ── Focus Styles ───────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* Remove default outline in favor of custom */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Screen Reader Only ─────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

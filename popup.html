@@ -254,6 +254,83 @@
     .sync-badge.online { background: #ECFDF5; color: #059669; }
     .sync-badge.offline { background: var(--bg-alt); color: var(--text-muted); }
     .sync-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+    /* Folder filter */
+    .search-bar { display: flex; gap: 8px; }
+    .search-bar input { flex: 1; min-width: 0; }
+    .folder-filter {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 11px;
+      background: var(--bg-alt);
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+      max-width: 100px;
+    }
+    .folder-filter:focus { border-color: var(--blue); }
+
+    /* Quick edit mode */
+    .macro-item .edit-btn {
+      display: none;
+      background: var(--blue-bg);
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 10px;
+      color: var(--blue);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .macro-item:hover .edit-btn { display: inline-block; }
+    .macro-item:hover .macro-count { display: none; }
+
+    .quick-edit-form {
+      display: none;
+      padding: 10px 18px;
+      background: var(--blue-bg);
+      border-bottom: 1px solid var(--blue-50);
+    }
+    .quick-edit-form.visible { display: block; }
+    .quick-edit-form input,
+    .quick-edit-form textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: inherit;
+      margin-bottom: 8px;
+      outline: none;
+    }
+    .quick-edit-form input:focus,
+    .quick-edit-form textarea:focus { border-color: var(--blue); }
+    .quick-edit-form textarea {
+      height: 60px;
+      resize: none;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    .quick-edit-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .quick-edit-actions button {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 5px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+    }
+    .quick-edit-actions .save-btn {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -272,6 +349,18 @@
 
   <div class="search-bar">
     <input type="text" id="search" placeholder="Search macros..." />
+    <select id="folder-filter" class="folder-filter">
+      <option value="">All Folders</option>
+    </select>
+  </div>
+
+  <div class="quick-edit-form" id="quick-edit-form">
+    <input type="text" id="quick-edit-trigger" placeholder="Trigger (without ;)" />
+    <textarea id="quick-edit-body" placeholder="Expansion text..."></textarea>
+    <div class="quick-edit-actions">
+      <button type="button" id="quick-edit-cancel">Cancel</button>
+      <button type="button" class="save-btn" id="quick-edit-save">Save</button>
+    </div>
   </div>
 
   <div id="recent-section"></div>

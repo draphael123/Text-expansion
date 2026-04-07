@@ -2,12 +2,16 @@ let macros = [];
 let currentFolder = null;
 let editingMacroId = null;
 let renamingFolder = null;
+let currentFilter = 'all'; // all, enabled, disabled
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 // ── Init ────────────────────────────────────────────────────────────
 async function init() {
+  // Show skeleton loaders immediately
+  showSkeletonLoaders();
+
   const data = await chrome.storage.local.get(['macros', 'session', 'settings', 'stats', 'charsSaved', 'conflicts', 'folders', 'isOnline']);
   macros = data.macros || [];
   renderAll();
@@ -19,7 +23,125 @@ async function init() {
   updateFolderDatalist();
   updateOfflineStatus(data.isOnline !== false);
 
+  // Check if onboarding should be shown
+  checkOnboarding();
+
   if (new URLSearchParams(location.search).get('add') === 'true') openMacroModal();
+}
+
+// ── Onboarding ──────────────────────────────────────────────────────
+const SAMPLE_MACROS = [
+  { trigger: 'sig', body: 'Best regards,\n[Your Name]', folder: 'General' },
+  { trigger: 'today', body: '{{date}}', folder: 'General' },
+  { trigger: 'email', body: 'Hi {{input:Name}},\n\nThank you for reaching out. I wanted to follow up on our conversation.\n\nBest regards', folder: 'Email' },
+  { trigger: 'shrug', body: '¯\\_(ツ)_/¯', folder: 'Fun' },
+  { trigger: 'addr', body: '{{input:Street}}, {{input:City}}, {{input:ZIP}}', folder: 'Personal' }
+];
+
+function checkOnboarding() {
+  if (!localStorage.getItem('snaptext-onboarded') && macros.length === 0) {
+    $('#modal-onboarding').classList.add('visible');
+  }
+}
+
+function closeOnboarding() {
+  $('#modal-onboarding').classList.remove('visible');
+  localStorage.setItem('snaptext-onboarded', 'true');
+}
+
+async function startWithSampleMacros() {
+  const btn = $('#onboarding-start');
+  setButtonLoading(btn, true);
+
+  // Create sample macros with unique IDs
+  const newMacros = SAMPLE_MACROS.map(m => ({
+    id: crypto.randomUUID(),
+    trigger: m.trigger,
+    body: m.body,
+    folder: m.folder,
+    enabled: true,
+    useCount: 0,
+    createdAt: Date.now()
+  }));
+
+  macros = [...macros, ...newMacros];
+  await saveMacros();
+  renderAll();
+  closeOnboarding();
+  showSuccessToast(`Created ${newMacros.length} sample macros!`);
+}
+
+// Event listeners for onboarding
+document.addEventListener('DOMContentLoaded', () => {
+  $('#onboarding-close')?.addEventListener('click', closeOnboarding);
+  $('#onboarding-skip')?.addEventListener('click', closeOnboarding);
+  $('#onboarding-start')?.addEventListener('click', startWithSampleMacros);
+  $('#modal-onboarding')?.addEventListener('click', (e) => {
+    if (e.target === $('#modal-onboarding')) closeOnboarding();
+  });
+});
+
+// ── Skeleton Loaders ────────────────────────────────────────────────
+function showSkeletonLoaders() {
+  // Skeleton for stats cards
+  const statsRow = $('#stats-row');
+  if (statsRow) {
+    statsRow.innerHTML = Array(4).fill(`
+      <div class="stat-card">
+        <div class="skeleton skeleton-text short" style="width:60%;height:10px;margin-bottom:8px;"></div>
+        <div class="skeleton skeleton-text" style="width:40%;height:28px;"></div>
+      </div>
+    `).join('');
+  }
+
+  // Skeleton for macro table
+  const tableWrap = $('#macro-table-wrap');
+  if (tableWrap) {
+    tableWrap.innerHTML = `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <div style="background:var(--bg);padding:10px 16px;border-bottom:1px solid var(--border);">
+          <div class="skeleton skeleton-text" style="width:100%;height:14px;"></div>
+        </div>
+        ${Array(5).fill(`
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border-light);display:flex;gap:16px;align-items:center;">
+            <div class="skeleton" style="width:60px;height:20px;"></div>
+            <div class="skeleton" style="flex:1;height:16px;"></div>
+            <div class="skeleton" style="width:60px;height:20px;"></div>
+            <div class="skeleton" style="width:40px;height:16px;"></div>
+            <div class="skeleton" style="width:34px;height:18px;border-radius:10px;"></div>
+            <div class="skeleton" style="width:50px;height:28px;"></div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Skeleton for folder list
+  const folderList = $('#folder-list');
+  if (folderList) {
+    folderList.innerHTML = Array(3).fill(`
+      <div class="sidebar-item" style="pointer-events:none;">
+        <div class="skeleton" style="width:16px;height:16px;"></div>
+        <div class="skeleton skeleton-text" style="flex:1;height:14px;"></div>
+      </div>
+    `).join('');
+  }
+}
+
+// ── Button Loading State ────────────────────────────────────────────
+function setButtonLoading(button, loading) {
+  if (loading) {
+    button.dataset.originalText = button.textContent;
+    button.classList.add('btn-loading');
+    button.disabled = true;
+  } else {
+    button.classList.remove('btn-loading');
+    button.disabled = false;
+    if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
+  }
 }
 
 // ── Offline indicator ───────────────────────────────────────────────
@@ -132,25 +254,120 @@ function updateFolderDatalist() {
 function renderMacroTable() {
   const q = ($('#dash-search')?.value || '').toLowerCase();
   let filtered = macros;
+  const totalCount = macros.length;
+
+  // Apply folder filter
   if (currentFolder) filtered = filtered.filter(m => (m.folder || 'General') === currentFolder);
+
+  // Apply enabled/disabled filter
+  if (currentFilter === 'enabled') {
+    filtered = filtered.filter(m => m.enabled !== false);
+  } else if (currentFilter === 'disabled') {
+    filtered = filtered.filter(m => m.enabled === false);
+  }
+
+  // Apply search query
   if (q) filtered = filtered.filter(m =>
     m.trigger.toLowerCase().includes(q) || m.body.toLowerCase().includes(q) || (m.folder || '').toLowerCase().includes(q)
   );
 
+  // Show result count
+  const resultCountEl = $('#search-result-count');
+  if (resultCountEl) {
+    if (q || currentFilter !== 'all' || currentFolder) {
+      resultCountEl.style.display = 'block';
+      resultCountEl.innerHTML = `Showing <span class="highlight">${filtered.length}</span> of ${totalCount} macros`;
+    } else {
+      resultCountEl.style.display = 'none';
+    }
+  }
+
   if (filtered.length === 0) {
-    $('#macro-table-wrap').innerHTML = `<div class="empty"><div class="icon">&#9889;</div><p>No macros found.</p><button class="btn btn-primary" id="btn-empty-new-macro">+ New Macro</button></div>`;
-    const emptyBtn = $('#btn-empty-new-macro');
-    if (emptyBtn) emptyBtn.addEventListener('click', () => openMacroModal());
+    const isSearching = q || currentFolder;
+    const emptyContent = isSearching
+      ? `
+        <div class="empty">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-light)" stroke-width="1.5" style="margin-bottom:16px;">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <p style="font-size:15px;font-weight:600;margin-bottom:4px;">No matches found</p>
+          <p style="font-size:13px;">Try adjusting your search or filter</p>
+          <button class="btn" id="btn-empty-clear" style="margin-top:12px;">Clear Search</button>
+        </div>`
+      : `
+        <div class="empty">
+          <svg width="72" height="72" viewBox="0 0 24 24" fill="none" style="margin-bottom:16px;">
+            <rect x="3" y="3" width="18" height="18" rx="3" stroke="var(--blue)" stroke-width="1.5" fill="var(--blue-bg)"/>
+            <path d="M7 8h10M7 12h6M7 16h8" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="18" cy="18" r="5" fill="var(--blue)"/>
+            <path d="M18 16v4M16 18h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <p style="font-size:16px;font-weight:600;margin-bottom:6px;">Create your first macro</p>
+          <p style="font-size:13px;max-width:280px;margin:0 auto 16px;">Type a trigger like <code style="background:var(--blue-bg);color:var(--blue);padding:2px 6px;border-radius:4px;">;sig</code> anywhere and it expands instantly.</p>
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button class="btn btn-primary" id="btn-empty-new-macro">+ New Macro</button>
+          </div>
+          <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+            <p style="font-size:12px;color:var(--text-light);margin-bottom:8px;">Example uses:</p>
+            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+              <span style="background:var(--bg);padding:4px 10px;border-radius:6px;font-size:12px;"><code>;sig</code> → Email signature</span>
+              <span style="background:var(--bg);padding:4px 10px;border-radius:6px;font-size:12px;"><code>;addr</code> → Your address</span>
+              <span style="background:var(--bg);padding:4px 10px;border-radius:6px;font-size:12px;"><code>;meet</code> → Meeting template</span>
+            </div>
+          </div>
+        </div>`;
+
+    $('#macro-table-wrap').innerHTML = emptyContent;
+
+    const newMacroBtn = $('#btn-empty-new-macro');
+    if (newMacroBtn) newMacroBtn.addEventListener('click', () => openMacroModal());
+
+    const clearBtn = $('#btn-empty-clear');
+    if (clearBtn) clearBtn.addEventListener('click', () => {
+      $('#dash-search').value = '';
+      currentFolder = null;
+      $$('.sidebar-item').forEach(i => i.classList.remove('active'));
+      $$('.sidebar-item[data-view="macros"]').forEach(i => i.classList.add('active'));
+      $('#view-title').textContent = 'All Macros';
+      renderMacroTable();
+    });
     return;
   }
 
-  filtered.sort((a, b) => (b.useCount || 0) - (a.useCount || 0));
+  filtered.sort((a, b) => {
+    // Sort by custom order if exists, then by useCount
+    if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+    return (b.useCount || 0) - (a.useCount || 0);
+  });
 
-  $('#macro-table-wrap').innerHTML = `
-    <table class="macro-table">
-      <thead><tr><th>Trigger</th><th>Body</th><th>Folder</th><th>Used</th><th>On</th><th>Actions</th></tr></thead>
-      <tbody>${filtered.map(m => `
-        <tr>
+  // Build bulk action bar
+  const bulkActionBar = `
+    <div id="bulk-action-bar" class="bulk-action-bar" style="display:none;">
+      <span id="bulk-count">0 selected</span>
+      <div class="bulk-actions">
+        <select id="bulk-move-folder" class="bulk-select">
+          <option value="">Move to folder...</option>
+          ${getAllFolders().map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('')}
+        </select>
+        <button class="btn btn-sm" id="bulk-enable">Enable</button>
+        <button class="btn btn-sm" id="bulk-disable">Disable</button>
+        <button class="btn btn-sm btn-danger" id="bulk-delete">Delete</button>
+        <button class="btn btn-sm" id="bulk-cancel">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  $('#macro-table-wrap').innerHTML = bulkActionBar + `
+    <table class="macro-table" id="macro-table">
+      <thead><tr>
+        <th style="width:32px;"><input type="checkbox" id="select-all-macros" title="Select all" /></th>
+        <th style="width:32px;"></th>
+        <th>Trigger</th><th>Body</th><th>Folder</th><th>Used</th><th>On</th><th>Actions</th>
+      </tr></thead>
+      <tbody>${filtered.map((m, idx) => `
+        <tr draggable="true" data-macro-id="${m.id}" data-index="${idx}">
+          <td><input type="checkbox" class="macro-checkbox" data-id="${m.id}" /></td>
+          <td class="drag-handle" style="cursor:grab;color:var(--text-light);text-align:center;">&#8942;&#8942;</td>
           <td class="trigger-cell">;${esc(m.trigger)}</td>
           <td class="body-cell" title="${esc(m.body)}">${esc(m.body)}</td>
           <td><span class="folder-badge">${esc(m.folder || 'General')}</span></td>
@@ -170,9 +387,272 @@ function renderMacroTable() {
   $$('[data-edit]').forEach(el => {
     el.addEventListener('click', () => openMacroModal(el.dataset.edit));
   });
+
+  // Initialize bulk selection
+  initBulkSelection();
+
+  // Initialize drag-and-drop for table rows
+  initTableDragDrop();
+}
+
+// ── Bulk Selection ─────────────────────────────────────────────────
+function initBulkSelection() {
+  const selectAll = $('#select-all-macros');
+  const checkboxes = $$('.macro-checkbox');
+  const bulkBar = $('#bulk-action-bar');
+
+  if (!selectAll) return;
+
+  // Select all checkbox
+  selectAll.addEventListener('change', () => {
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateBulkBar();
+  });
+
+  // Individual checkboxes
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const allChecked = [...checkboxes].every(c => c.checked);
+      const someChecked = [...checkboxes].some(c => c.checked);
+      selectAll.checked = allChecked;
+      selectAll.indeterminate = someChecked && !allChecked;
+      updateBulkBar();
+    });
+  });
+
+  // Bulk action buttons
+  $('#bulk-enable')?.addEventListener('click', () => bulkSetEnabled(true));
+  $('#bulk-disable')?.addEventListener('click', () => bulkSetEnabled(false));
+  $('#bulk-delete')?.addEventListener('click', bulkDelete);
+  $('#bulk-cancel')?.addEventListener('click', () => {
+    checkboxes.forEach(cb => cb.checked = false);
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+    updateBulkBar();
+  });
+
+  // Move to folder dropdown
+  $('#bulk-move-folder')?.addEventListener('change', (e) => {
+    if (e.target.value) {
+      bulkMoveToFolder(e.target.value);
+      e.target.value = '';
+    }
+  });
+}
+
+function getSelectedMacroIds() {
+  return [...$$('.macro-checkbox:checked')].map(cb => cb.dataset.id);
+}
+
+function updateBulkBar() {
+  const selected = getSelectedMacroIds();
+  const bulkBar = $('#bulk-action-bar');
+  const countEl = $('#bulk-count');
+
+  if (selected.length > 0) {
+    bulkBar.style.display = 'flex';
+    countEl.textContent = `${selected.length} selected`;
+  } else {
+    bulkBar.style.display = 'none';
+  }
+}
+
+function bulkSetEnabled(enabled) {
+  const ids = getSelectedMacroIds();
+  if (ids.length === 0) return;
+
+  ids.forEach(id => {
+    const macro = macros.find(m => m.id === id);
+    if (macro) macro.enabled = enabled;
+  });
+
+  saveMacros();
+  renderMacroTable();
+  showSuccessToast(`${enabled ? 'Enabled' : 'Disabled'} ${ids.length} macro(s)`);
+}
+
+function bulkMoveToFolder(folder) {
+  const ids = getSelectedMacroIds();
+  if (ids.length === 0) return;
+
+  ids.forEach(id => {
+    const macro = macros.find(m => m.id === id);
+    if (macro) macro.folder = folder;
+  });
+
+  saveMacros();
+  renderAll();
+  showSuccessToast(`Moved ${ids.length} macro(s) to "${folder}"`);
+}
+
+function bulkDelete() {
+  const ids = getSelectedMacroIds();
+  if (ids.length === 0) return;
+
+  const deletedMacros = macros.filter(m => ids.includes(m.id));
+  macros = macros.filter(m => !ids.includes(m.id));
+  saveMacros();
+  renderAll();
+
+  showToast(`Deleted ${ids.length} macro(s)`, {
+    type: 'default',
+    undoCallback: () => {
+      macros = [...macros, ...deletedMacros];
+      saveMacros();
+      renderAll();
+      showSuccessToast('Macros restored');
+    }
+  });
 }
 
 function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+
+// ── Drag and Drop ──────────────────────────────────────────────────
+let draggedMacroId = null;
+let draggedRow = null;
+
+function initTableDragDrop() {
+  const tbody = document.querySelector('#macro-table tbody');
+  if (!tbody) return;
+
+  const rows = tbody.querySelectorAll('tr[draggable="true"]');
+
+  rows.forEach(row => {
+    row.addEventListener('dragstart', handleDragStart);
+    row.addEventListener('dragend', handleDragEnd);
+    row.addEventListener('dragover', handleDragOver);
+    row.addEventListener('drop', handleDrop);
+    row.addEventListener('dragleave', handleDragLeave);
+  });
+
+  // Also make sidebar folders drop targets
+  initFolderDropTargets();
+}
+
+function handleDragStart(e) {
+  draggedMacroId = e.target.dataset.macroId;
+  draggedRow = e.target;
+  e.target.style.opacity = '0.5';
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', draggedMacroId);
+}
+
+function handleDragEnd(e) {
+  e.target.style.opacity = '1';
+  draggedRow = null;
+  draggedMacroId = null;
+
+  // Remove all drop indicators
+  document.querySelectorAll('.drop-above, .drop-below').forEach(el => {
+    el.classList.remove('drop-above', 'drop-below');
+  });
+  document.querySelectorAll('.sidebar-item.drop-target').forEach(el => {
+    el.classList.remove('drop-target');
+  });
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+
+  const row = e.target.closest('tr[draggable="true"]');
+  if (!row || row === draggedRow) return;
+
+  // Determine if dropping above or below
+  const rect = row.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+
+  // Remove previous indicators
+  document.querySelectorAll('.drop-above, .drop-below').forEach(el => {
+    el.classList.remove('drop-above', 'drop-below');
+  });
+
+  if (e.clientY < midY) {
+    row.classList.add('drop-above');
+  } else {
+    row.classList.add('drop-below');
+  }
+}
+
+function handleDragLeave(e) {
+  const row = e.target.closest('tr[draggable="true"]');
+  if (row) {
+    row.classList.remove('drop-above', 'drop-below');
+  }
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+
+  const targetRow = e.target.closest('tr[draggable="true"]');
+  if (!targetRow || !draggedMacroId) return;
+
+  const targetMacroId = targetRow.dataset.macroId;
+  if (targetMacroId === draggedMacroId) return;
+
+  const rect = targetRow.getBoundingClientRect();
+  const dropAbove = e.clientY < rect.top + rect.height / 2;
+
+  // Find indices
+  const draggedIndex = macros.findIndex(m => m.id === draggedMacroId);
+  let targetIndex = macros.findIndex(m => m.id === targetMacroId);
+
+  if (draggedIndex === -1 || targetIndex === -1) return;
+
+  // Remove dragged item
+  const [draggedMacro] = macros.splice(draggedIndex, 1);
+
+  // Recalculate target index after removal
+  targetIndex = macros.findIndex(m => m.id === targetMacroId);
+  const insertIndex = dropAbove ? targetIndex : targetIndex + 1;
+
+  // Insert at new position
+  macros.splice(insertIndex, 0, draggedMacro);
+
+  // Update order property
+  macros.forEach((m, i) => m.order = i);
+
+  saveMacros();
+  renderMacroTable();
+  showSuccessToast('Macro order updated');
+}
+
+function initFolderDropTargets() {
+  const folderItems = document.querySelectorAll('#folder-list .sidebar-item');
+
+  folderItems.forEach(item => {
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      item.classList.add('drop-target');
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drop-target');
+    });
+
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      item.classList.remove('drop-target');
+
+      const macroId = e.dataTransfer.getData('text/plain');
+      const targetFolder = item.dataset.folder;
+
+      if (!macroId || !targetFolder) return;
+
+      const macro = macros.find(m => m.id === macroId);
+      if (!macro) return;
+
+      const oldFolder = macro.folder || 'General';
+      if (oldFolder === targetFolder) return;
+
+      macro.folder = targetFolder;
+      saveMacros();
+      renderAll();
+      showSuccessToast(`Moved to "${targetFolder}"`);
+    });
+  });
+}
 
 // ── Folder CRUD ────────────────────────────────────────────────────
 function openFolderModal(renameFrom) {
@@ -321,9 +801,27 @@ function saveMacro() {
 }
 
 function deleteMacro() {
-  if (!editingMacroId || !confirm('Delete this macro?')) return;
+  if (!editingMacroId) return;
+
+  const macroToDelete = macros.find(m => m.id === editingMacroId);
+  if (!macroToDelete) return;
+
+  // Remove macro
   macros = macros.filter(m => m.id !== editingMacroId);
-  saveMacros(); closeMacroModal(); renderAll();
+  saveMacros();
+  closeMacroModal();
+  renderAll();
+
+  // Show toast with undo option
+  showToast(`Deleted "${macroToDelete.trigger}"`, {
+    type: 'default',
+    undoCallback: () => {
+      macros.push(macroToDelete);
+      saveMacros();
+      renderAll();
+      showSuccessToast('Macro restored');
+    }
+  });
 }
 
 async function saveMacros() { await chrome.storage.local.set({ macros }); }
@@ -532,32 +1030,91 @@ async function shareSingleMacro(macroId) {
   }
 }
 
-// Simple toast notification
-function showToast(message) {
+// ── Toast Notification System ────────────────────────────────────────
+let toastTimeout = null;
+let pendingUndo = null;
+
+function showToast(message, options = {}) {
+  const { type = 'default', undoCallback = null, duration = 3000 } = options;
+
+  // Clear any existing toast
   const existing = document.querySelector('.toast-notification');
   if (existing) existing.remove();
+  if (toastTimeout) clearTimeout(toastTimeout);
 
   const toast = document.createElement('div');
   toast.className = 'toast-notification';
+
+  // Type-specific colors
+  const colors = {
+    default: '#1F2937',
+    success: '#10B981',
+    error: '#EF4444',
+    info: '#3B82F6'
+  };
+
   toast.style.cssText = `
     position: fixed;
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
-    background: #1F2937;
+    background: ${colors[type] || colors.default};
     color: white;
     padding: 12px 20px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 13px;
     font-weight: 500;
     z-index: 9999;
     animation: slideUp 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
   `;
-  toast.textContent = message;
+
+  const messageSpan = document.createElement('span');
+  messageSpan.textContent = message;
+  toast.appendChild(messageSpan);
+
+  // Add undo button if callback provided
+  if (undoCallback) {
+    pendingUndo = undoCallback;
+    const undoBtn = document.createElement('button');
+    undoBtn.textContent = 'Undo';
+    undoBtn.style.cssText = `
+      background: none;
+      border: none;
+      color: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+      margin-left: auto;
+      font-size: 13px;
+    `;
+    undoBtn.addEventListener('click', () => {
+      if (pendingUndo) {
+        pendingUndo();
+        pendingUndo = null;
+      }
+      toast.remove();
+      if (toastTimeout) clearTimeout(toastTimeout);
+    });
+    toast.appendChild(undoBtn);
+  }
+
   document.body.appendChild(toast);
 
-  setTimeout(() => toast.remove(), 3000);
+  toastTimeout = setTimeout(() => {
+    toast.remove();
+    pendingUndo = null;
+  }, undoCallback ? 5000 : duration);
 }
+
+// Convenience functions for typed toasts
+function showSuccessToast(message) { showToast(message, { type: 'success' }); }
+function showErrorToast(message) { showToast(message, { type: 'error' }); }
+function showInfoToast(message) { showToast(message, { type: 'info' }); }
 
 async function importFromCloud() {
   const code = $('#cloud-import-code').value.trim();
@@ -1012,6 +1569,17 @@ $('#modal-cancel').addEventListener('click', closeMacroModal);
 $('#modal-save').addEventListener('click', saveMacro);
 $('#modal-delete').addEventListener('click', deleteMacro);
 $('#dash-search').addEventListener('input', renderMacroTable);
+
+// Filter chips
+$$('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    $$('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentFilter = chip.dataset.filter;
+    renderMacroTable();
+  });
+});
+
 $('#macro-body').addEventListener('input', updatePreview);
 $('#macro-trigger').addEventListener('input', checkDuplicate);
 
@@ -1508,5 +2076,85 @@ async function init() {
   await originalInit();
   await loadTeams();
 }
+
+// ── Keyboard Navigation ─────────────────────────────────────────────────
+let selectedRowIndex = -1;
+
+function initKeyboardNavigation() {
+  document.addEventListener('keydown', (e) => {
+    // Only handle navigation when not in input/modal
+    const activeEl = document.activeElement;
+    const inInput = activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable;
+    const inModal = activeEl.closest('.modal-overlay.visible');
+
+    if (inInput || inModal) return;
+
+    const table = document.querySelector('.macro-table tbody');
+    if (!table) return;
+
+    const rows = table.querySelectorAll('tr');
+    if (rows.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        selectedRowIndex = Math.min(selectedRowIndex + 1, rows.length - 1);
+        highlightRow(rows, selectedRowIndex);
+        break;
+
+      case 'ArrowUp':
+        e.preventDefault();
+        selectedRowIndex = Math.max(selectedRowIndex - 1, 0);
+        highlightRow(rows, selectedRowIndex);
+        break;
+
+      case 'Enter':
+        if (selectedRowIndex >= 0 && selectedRowIndex < rows.length) {
+          e.preventDefault();
+          const editBtn = rows[selectedRowIndex].querySelector('[data-edit]');
+          if (editBtn) editBtn.click();
+        }
+        break;
+
+      case '/':
+        // Focus search on / key
+        e.preventDefault();
+        const searchInput = $('#dash-search');
+        if (searchInput) searchInput.focus();
+        break;
+
+      case 'n':
+        // New macro on 'n' key
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          openMacroModal();
+        }
+        break;
+    }
+  });
+}
+
+function highlightRow(rows, index) {
+  rows.forEach((row, i) => {
+    if (i === index) {
+      row.style.outline = '2px solid var(--blue)';
+      row.style.outlineOffset = '-2px';
+      row.scrollIntoView({ block: 'nearest' });
+    } else {
+      row.style.outline = '';
+      row.style.outlineOffset = '';
+    }
+  });
+}
+
+// Reset selection when table is re-rendered
+const originalRenderMacroTable = renderMacroTable;
+renderMacroTable = function() {
+  selectedRowIndex = -1;
+  originalRenderMacroTable();
+};
+
+// Initialize keyboard navigation
+document.addEventListener('DOMContentLoaded', initKeyboardNavigation);
 
 init();
