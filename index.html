@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SnapText — Instant Text Expansion for Chrome</title>
   <meta name="description" content="Type less, do more. SnapText expands text shortcuts into full snippets instantly — with variables, cross-device sync, and zero friction." />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="SnapText — Instant Text Expansion for Chrome" />
+  <meta property="og:description" content="Type less, do more. SnapText expands text shortcuts into full snippets instantly — with variables, cross-device sync, and zero friction." />
+  <meta property="og:image" content="icons/icon128.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="SnapText — Instant Text Expansion for Chrome" />
+  <meta name="twitter:description" content="Type less, do more. SnapText expands text shortcuts into full snippets instantly." />
+
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#2563EB" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1261,22 +1273,37 @@
         <div class="feature-card fade-up">
           <div class="feature-icon">&#123;&#125;</div>
           <h3>Smart Variables</h3>
-          <p>Insert dynamic content like today's date, current time, clipboard contents, or prompt yourself for custom input.</p>
+          <p>Insert dynamic content like dates, time, URLs, page titles, selected text, and prompt yourself for custom input.</p>
         </div>
         <div class="feature-card fade-up">
           <div class="feature-icon">&#128269;</div>
           <h3>Quick Search</h3>
-          <p>Press Ctrl+Shift+Space to open a floating search bar on any page. Find and insert any macro without leaving your flow.</p>
+          <p>Press Ctrl+Shift+Space to open a floating search bar on any page. Fuzzy search finds matches in triggers and body text.</p>
         </div>
         <div class="feature-card fade-up">
           <div class="feature-icon">&#128202;</div>
           <h3>Usage Analytics</h3>
-          <p>See which macros you use most, how many expansions you've done this week, and how much typing you've saved.</p>
+          <p>Track expansions over time, see your most-used macros, and view activity heatmaps by day and hour.</p>
         </div>
         <div class="feature-card fade-up">
           <div class="feature-icon">&#128230;</div>
           <h3>Import &amp; Export</h3>
-          <p>Backup your macros to JSON, import from TextExpander or other tools, and share snippet collections with anyone.</p>
+          <p>Backup to JSON/CSV, import from TextExpander or Espanso, and migrate your existing snippets in seconds.</p>
+        </div>
+        <div class="feature-card fade-up">
+          <div class="feature-icon">&#128221;</div>
+          <h3>Starter Templates</h3>
+          <p>Jump-start with 6 pre-built packs: Email, Developer, Support, Meeting, Fun, and Sales templates.</p>
+        </div>
+        <div class="feature-card fade-up">
+          <div class="feature-icon">&#127919;</div>
+          <h3>Multi-Cursor</h3>
+          <p>Place multiple cursor points in your snippets. Press Tab to jump between positions after expansion.</p>
+        </div>
+        <div class="feature-card fade-up">
+          <div class="feature-icon">&#9000;</div>
+          <h3>Keyboard First</h3>
+          <p>Vim-style navigation with j/k, quick editing with e/d, and full shortcut support throughout the dashboard.</p>
         </div>
       </div>
     </div>
@@ -1298,16 +1325,16 @@
         <span class="var-desc">Current time</span>
       </div>
       <div class="var-item fade-up">
-        <span class="var-code">{{date+7}}</span>
-        <span class="var-desc">Relative date</span>
+        <span class="var-code">{{date:YYYY-MM-DD}}</span>
+        <span class="var-desc">Custom format</span>
       </div>
       <div class="var-item fade-up">
         <span class="var-code">{{clipboard}}</span>
         <span class="var-desc">Clipboard contents</span>
       </div>
       <div class="var-item fade-up">
-        <span class="var-code">{{cursor}}</span>
-        <span class="var-desc">Cursor placement</span>
+        <span class="var-code">{{cursor:1}}</span>
+        <span class="var-desc">Multi-cursor</span>
       </div>
       <div class="var-item fade-up">
         <span class="var-code">{{input:Label}}</span>
@@ -1318,16 +1345,34 @@
         <span class="var-desc">Dropdown picker</span>
       </div>
       <div class="var-item fade-up">
-        <span class="var-code">{{random:a,b}}</span>
-        <span class="var-desc">Random selection</span>
+        <span class="var-code">{{domain}}</span>
+        <span class="var-desc">Current domain</span>
+      </div>
+      <div class="var-item fade-up">
+        <span class="var-code">{{selection}}</span>
+        <span class="var-desc">Selected text</span>
+      </div>
+      <div class="var-item fade-up">
+        <span class="var-code">{{weekday}}</span>
+        <span class="var-desc">Day name</span>
+      </div>
+    </div>
+    <div class="var-grid var-grid-wide" style="margin-top: 16px;">
+      <div class="var-item fade-up">
+        <span class="var-code">{{url}}</span>
+        <span class="var-desc">Current URL</span>
+      </div>
+      <div class="var-item fade-up">
+        <span class="var-code">{{title}}</span>
+        <span class="var-desc">Page title</span>
       </div>
       <div class="var-item fade-up">
         <span class="var-code">{{calc:1+1}}</span>
         <span class="var-desc">Math expression</span>
       </div>
       <div class="var-item fade-up">
-        <span class="var-code">{{uppercase}}</span>
-        <span class="var-desc">Text wrapper</span>
+        <span class="var-code">{{random:a,b}}</span>
+        <span class="var-desc">Random pick</span>
       </div>
     </div>
   </section>

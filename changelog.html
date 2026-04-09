@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Changelog — SnapText</title>
   <meta name="description" content="See what's new in SnapText. Release notes, new features, bug fixes, and improvements." />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Changelog — SnapText" />
+  <meta property="og:description" content="See what's new in SnapText. Release notes, new features, bug fixes, and improvements." />
+  <meta property="og:image" content="icons/icon128.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Changelog — SnapText" />
+  <meta name="twitter:description" content="See what's new in SnapText. Release notes and improvements." />
+
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#2563EB" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -241,11 +253,53 @@
     <p class="subtitle">See what's new in SnapText. All notable changes are documented here.</p>
 
     <div class="timeline">
+      <div class="version" id="v2.1.0">
+        <div class="version-header">
+          <span class="version-number">v2.1.0</span>
+          <span class="version-date">April 9, 2026</span>
+          <span class="version-tag latest">Latest</span>
+          <span class="version-tag major">Major</span>
+        </div>
+        <div class="changes">
+          <div class="change-group">
+            <div class="change-type added">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Added
+            </div>
+            <ul class="change-list">
+              <li>Snippet templates - 6 pre-built packs (Email, Developer, Support, Meeting, Fun, Sales) with one-click install</li>
+              <li>Multi-cursor support - Use <code>{{cursor:1}}</code>, <code>{{cursor:2}}</code> for multiple tab-stops after expansion</li>
+              <li>Snippet chaining - Link macros together to auto-trigger sequences</li>
+              <li>Usage analytics dashboard - Charts, heatmaps, and top macro rankings</li>
+              <li>TextExpander CSV import - Migrate easily from TextExpander</li>
+              <li>Espanso YAML import - Import Espanso configuration files</li>
+              <li>Snippet tags - Organize macros with custom tags and filter by tag</li>
+              <li>Vim-style keyboard navigation - <kbd>j</kbd>/<kbd>k</kbd> to move, <kbd>e</kbd> to edit, <kbd>d</kbd> to delete</li>
+              <li>Undo/redo in macro editor - Full history with <kbd>Ctrl+Z</kbd>/<kbd>Ctrl+Y</kbd></li>
+              <li>New variables: <code>{{weekday}}</code>, <code>{{month}}</code>, <code>{{year}}</code>, <code>{{domain}}</code>, <code>{{url}}</code>, <code>{{title}}</code>, <code>{{selection}}</code></li>
+              <li>Custom date/time formatting: <code>{{date:YYYY-MM-DD}}</code>, <code>{{time:HH:mm}}</code></li>
+              <li>Keyboard shortcuts help modal (press <kbd>?</kbd> in dashboard)</li>
+            </ul>
+          </div>
+          <div class="change-group">
+            <div class="change-type improved">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              Improved
+            </div>
+            <ul class="change-list">
+              <li>Fuzzy search now searches macro body text, not just triggers</li>
+              <li>CSS extracted to separate stylesheet for better performance</li>
+              <li>Modular codebase with esbuild bundling</li>
+              <li>Keyboard-first UX throughout the dashboard</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <div class="version" id="v2.0.4">
         <div class="version-header">
           <span class="version-number">v2.0.4</span>
           <span class="version-date">April 6, 2026</span>
-          <span class="version-tag latest">Latest</span>
         </div>
         <div class="changes">
           <div class="change-group">

@@ -3,9 +3,64 @@ let currentFolder = null;
 let editingMacroId = null;
 let renamingFolder = null;
 let currentFilter = 'all'; // all, enabled, disabled
+let currentTags = []; // Tags for the macro being edited
+let filterTags = []; // Tags selected for filtering
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
+
+// Fuzzy search scoring function
+function fuzzyMatch(text, query) {
+  if (!query) return { match: true, score: 0 };
+  text = text.toLowerCase();
+  query = query.toLowerCase();
+
+  // Exact match gets highest score
+  if (text.includes(query)) {
+    const index = text.indexOf(query);
+    return { match: true, score: 100 - index, indices: [[index, index + query.length - 1]] };
+  }
+
+  // Fuzzy matching - all query chars must appear in order
+  let queryIdx = 0;
+  let indices = [];
+  let lastMatchIdx = -1;
+  let score = 0;
+
+  for (let i = 0; i < text.length && queryIdx < query.length; i++) {
+    if (text[i] === query[queryIdx]) {
+      indices.push(i);
+      // Bonus for consecutive matches
+      if (lastMatchIdx === i - 1) score += 5;
+      // Bonus for start of word
+      if (i === 0 || text[i - 1] === ' ' || text[i - 1] === '-' || text[i - 1] === '_') score += 10;
+      lastMatchIdx = i;
+      queryIdx++;
+    }
+  }
+
+  if (queryIdx === query.length) {
+    // All characters matched
+    score += 50 - (indices[indices.length - 1] - indices[0]); // Bonus for tighter matches
+    return { match: true, score, indices: indices.map(i => [i, i]) };
+  }
+
+  return { match: false, score: 0 };
+}
+
+// Highlight matching text
+function highlightMatch(text, query) {
+  if (!query) return esc(text);
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const idx = lowerText.indexOf(lowerQuery);
+  if (idx === -1) return esc(text);
+
+  const before = text.slice(0, idx);
+  const match = text.slice(idx, idx + query.length);
+  const after = text.slice(idx + query.length);
+  return `${esc(before)}<mark class="search-highlight">${esc(match)}</mark>${esc(after)}`;
+}
 
 // ── Init ────────────────────────────────────────────────────────────
 async function init() {
@@ -183,6 +238,266 @@ function renderStats(stats, charsSaved) {
   $('#stat-chars').textContent = charsSaved >= 1000 ? `${(charsSaved / 1000).toFixed(1)}k` : charsSaved;
 }
 
+// ── Analytics ───────────────────────────────────────────────────────
+let analyticsChartMode = 'usage'; // 'usage' or 'chars'
+
+async function renderAnalytics() {
+  const data = await chrome.storage.local.get(['stats', 'charsSaved', 'dailyChars', 'hourlyStats']);
+  const stats = data.stats || {};
+  const charsSaved = data.charsSaved || 0;
+  const dailyChars = data.dailyChars || {};
+  const hourlyStats = data.hourlyStats || {};
+
+  // Calculate totals
+  let totalExpansions = 0;
+  for (const date in stats) {
+    totalExpansions += stats[date];
+  }
+
+  // Assume 40 WPM typing, average word is 5 chars
+  const timeMinutes = Math.round(charsSaved / (40 * 5));
+
+  // Find most active day
+  let bestDay = '—';
+  let bestDayCount = 0;
+  for (const date in stats) {
+    if (stats[date] > bestDayCount) {
+      bestDayCount = stats[date];
+      bestDay = new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+  }
+
+  // Update summary cards
+  $('#analytics-total').textContent = totalExpansions.toLocaleString();
+  $('#analytics-chars').textContent = charsSaved >= 1000 ? `${(charsSaved / 1000).toFixed(1)}k` : charsSaved;
+  $('#analytics-time').textContent = timeMinutes >= 60 ? `${Math.floor(timeMinutes / 60)}h ${timeMinutes % 60}m` : `${timeMinutes} min`;
+  $('#analytics-best-day').textContent = bestDay;
+
+  // Render usage chart
+  renderUsageChart(stats, dailyChars);
+
+  // Render top macros
+  renderTopMacros();
+
+  // Render folder usage
+  renderFolderUsage();
+
+  // Render heatmap
+  renderHeatmap(hourlyStats);
+}
+
+function renderUsageChart(stats, dailyChars) {
+  const canvas = $('#usage-chart');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+
+  // Get last 30 days of data
+  const days = [];
+  const values = [];
+  const now = new Date();
+
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    days.push(d.getDate().toString());
+
+    if (analyticsChartMode === 'usage') {
+      values.push(stats[dateStr] || 0);
+    } else {
+      values.push(dailyChars[dateStr] || 0);
+    }
+  }
+
+  const maxVal = Math.max(...values, 1);
+  const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const barWidth = chartWidth / 30 - 4;
+
+  // Clear canvas
+  ctx.clearRect(0, 0, width, height);
+
+  // Get theme colors
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const textColor = isDark ? '#9CA3AF' : '#6B7280';
+  const barColor = '#3B82F6';
+  const gridColor = isDark ? '#374151' : '#E5E7EB';
+
+  // Draw grid lines
+  ctx.strokeStyle = gridColor;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padding.top + (chartHeight / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+  }
+
+  // Draw bars
+  ctx.fillStyle = barColor;
+  for (let i = 0; i < values.length; i++) {
+    const barHeight = (values[i] / maxVal) * chartHeight;
+    const x = padding.left + i * (chartWidth / 30) + 2;
+    const y = padding.top + chartHeight - barHeight;
+    ctx.fillRect(x, y, barWidth, barHeight);
+  }
+
+  // Draw labels
+  ctx.fillStyle = textColor;
+  ctx.font = '11px Inter, sans-serif';
+  ctx.textAlign = 'center';
+
+  // X-axis labels (every 5th day)
+  for (let i = 0; i < days.length; i += 5) {
+    const x = padding.left + i * (chartWidth / 30) + barWidth / 2 + 2;
+    ctx.fillText(days[i], x, height - 10);
+  }
+
+  // Y-axis labels
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = Math.round(maxVal * (4 - i) / 4);
+    const y = padding.top + (chartHeight / 4) * i + 4;
+    ctx.fillText(val.toString(), padding.left - 10, y);
+  }
+}
+
+function renderTopMacros() {
+  const container = $('#analytics-top-macros');
+  if (!container) return;
+
+  // Sort macros by useCount
+  const sorted = [...macros]
+    .filter(m => m.useCount > 0)
+    .sort((a, b) => (b.useCount || 0) - (a.useCount || 0))
+    .slice(0, 10);
+
+  if (sorted.length === 0) {
+    container.innerHTML = '<div class="analytics-empty">No usage data yet. Start using your macros!</div>';
+    return;
+  }
+
+  const maxCount = sorted[0].useCount || 1;
+
+  container.innerHTML = sorted.map((m, i) => `
+    <div class="analytics-top-item">
+      <div class="ati-rank">#${i + 1}</div>
+      <div class="ati-info">
+        <div class="ati-trigger">${esc(m.trigger)}</div>
+        <div class="ati-folder">${esc(m.folder || 'General')}</div>
+      </div>
+      <div class="ati-bar-wrap">
+        <div class="ati-bar" style="width: ${(m.useCount / maxCount) * 100}%"></div>
+      </div>
+      <div class="ati-count">${m.useCount}</div>
+    </div>
+  `).join('');
+}
+
+function renderFolderUsage() {
+  const container = $('#analytics-folders');
+  if (!container) return;
+
+  // Group usage by folder
+  const folderUsage = {};
+  for (const m of macros) {
+    const folder = m.folder || 'General';
+    folderUsage[folder] = (folderUsage[folder] || 0) + (m.useCount || 0);
+  }
+
+  const sorted = Object.entries(folderUsage)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+
+  const total = sorted.reduce((sum, [, count]) => sum + count, 0) || 1;
+
+  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+
+  container.innerHTML = `
+    <div class="folder-chart-bars">
+      ${sorted.map(([folder, count], i) => `
+        <div class="folder-bar-row">
+          <div class="fbr-label">${esc(folder)}</div>
+          <div class="fbr-bar-wrap">
+            <div class="fbr-bar" style="width: ${(count / total) * 100}%; background: ${colors[i % colors.length]}"></div>
+          </div>
+          <div class="fbr-count">${count}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderHeatmap(hourlyStats) {
+  const container = $('#analytics-heatmap');
+  if (!container) return;
+
+  // Create 7x24 grid for day of week x hour
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+
+  // Parse hourly stats into grid
+  const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
+  let maxVal = 0;
+
+  for (const key in hourlyStats) {
+    // Key format: "YYYY-MM-DD-HH"
+    const parts = key.split('-');
+    if (parts.length >= 4) {
+      const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      const day = date.getDay();
+      const hour = parseInt(parts[3]);
+      grid[day][hour] += hourlyStats[key];
+      maxVal = Math.max(maxVal, grid[day][hour]);
+    }
+  }
+
+  container.innerHTML = `
+    <div class="heatmap-grid">
+      <div class="heatmap-row heatmap-header">
+        <div class="heatmap-label"></div>
+        ${hours.filter(h => h % 3 === 0).map(h => `<div class="heatmap-hour">${h}</div>`).join('')}
+      </div>
+      ${days.map((day, dayIdx) => `
+        <div class="heatmap-row">
+          <div class="heatmap-label">${day}</div>
+          ${hours.map(h => {
+            const val = grid[dayIdx][h];
+            const intensity = maxVal > 0 ? Math.min(val / maxVal, 1) : 0;
+            const opacity = 0.1 + intensity * 0.9;
+            return `<div class="heatmap-cell" style="background: rgba(59, 130, 246, ${opacity})" title="${day} ${h}:00 - ${val} expansions"></div>`;
+          }).join('')}
+        </div>
+      `).join('')}
+    </div>
+    <div class="heatmap-legend">
+      <span>Less</span>
+      <div class="heatmap-legend-cells">
+        ${[0.1, 0.3, 0.5, 0.7, 0.9].map(o => `<div class="heatmap-legend-cell" style="background: rgba(59, 130, 246, ${o})"></div>`).join('')}
+      </div>
+      <span>More</span>
+    </div>
+  `;
+}
+
+// Analytics chart toggle
+document.addEventListener('DOMContentLoaded', () => {
+  $$('.chart-toggle').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      $$('.chart-toggle').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      analyticsChartMode = btn.dataset.chart;
+      const data = await chrome.storage.local.get(['stats', 'dailyChars']);
+      renderUsageChart(data.stats || {}, data.dailyChars || {});
+    });
+  });
+});
+
 // ── Render ──────────────────────────────────────────────────────────
 function renderAll() { renderFolders(); renderMacroTable(); }
 
@@ -266,10 +581,34 @@ function renderMacroTable() {
     filtered = filtered.filter(m => m.enabled === false);
   }
 
-  // Apply search query
-  if (q) filtered = filtered.filter(m =>
-    m.trigger.toLowerCase().includes(q) || m.body.toLowerCase().includes(q) || (m.folder || '').toLowerCase().includes(q)
-  );
+  // Apply tag filter
+  if (filterTags.length > 0) {
+    filtered = filtered.filter(m =>
+      m.tags && filterTags.every(t => m.tags.includes(t))
+    );
+  }
+
+  // Apply search query with fuzzy matching (includes tags)
+  if (q) {
+    filtered = filtered.map(m => {
+      const triggerMatch = fuzzyMatch(m.trigger, q);
+      const bodyMatch = fuzzyMatch(m.body, q);
+      const folderMatch = fuzzyMatch(m.folder || '', q);
+      const tagMatch = m.tags ? m.tags.some(t => fuzzyMatch(t, q).match) : false;
+
+      const isMatch = triggerMatch.match || bodyMatch.match || folderMatch.match || tagMatch;
+      const score = Math.max(
+        triggerMatch.match ? triggerMatch.score + 50 : 0, // Boost trigger matches
+        bodyMatch.match ? bodyMatch.score : 0,
+        folderMatch.match ? folderMatch.score : 0,
+        tagMatch ? 30 : 0
+      );
+
+      return { ...m, _searchMatch: isMatch, _searchScore: score };
+    })
+    .filter(m => m._searchMatch)
+    .sort((a, b) => b._searchScore - a._searchScore);
+  }
 
   // Show result count
   const resultCountEl = $('#search-result-count');
@@ -334,11 +673,14 @@ function renderMacroTable() {
     return;
   }
 
-  filtered.sort((a, b) => {
-    // Sort by custom order if exists, then by useCount
-    if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
-    return (b.useCount || 0) - (a.useCount || 0);
-  });
+  // Only sort by order/useCount if not searching (search has its own scoring)
+  if (!q) {
+    filtered.sort((a, b) => {
+      // Sort by custom order if exists, then by useCount
+      if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+      return (b.useCount || 0) - (a.useCount || 0);
+    });
+  }
 
   // Build bulk action bar
   const bulkActionBar = `
@@ -368,9 +710,12 @@ function renderMacroTable() {
         <tr draggable="true" data-macro-id="${m.id}" data-index="${idx}">
           <td><input type="checkbox" class="macro-checkbox" data-id="${m.id}" /></td>
           <td class="drag-handle" style="cursor:grab;color:var(--text-light);text-align:center;">&#8942;&#8942;</td>
-          <td class="trigger-cell">;${esc(m.trigger)}</td>
-          <td class="body-cell" title="${esc(m.body)}">${esc(m.body)}</td>
-          <td><span class="folder-badge">${esc(m.folder || 'General')}</span></td>
+          <td class="trigger-cell">;${q ? highlightMatch(m.trigger, q) : esc(m.trigger)}</td>
+          <td class="body-cell" title="${esc(m.body)}">
+            ${q ? highlightMatch(m.body, q) : esc(m.body)}
+            ${m.tags && m.tags.length > 0 ? `<div class="macro-tags">${m.tags.map(t => `<span class="macro-tag">${q ? highlightMatch(t, q) : esc(t)}</span>`).join('')}</div>` : ''}
+          </td>
+          <td><span class="folder-badge">${q ? highlightMatch(m.folder || 'General', q) : esc(m.folder || 'General')}</span></td>
           <td><span class="use-count">${m.useCount || 0}x</span></td>
           <td><label class="toggle-switch"><input type="checkbox" ${m.enabled !== false ? 'checked' : ''} data-toggle="${m.id}" /><span class="toggle-slider"></span></label></td>
           <td><div class="actions-cell"><button class="btn btn-sm" data-edit="${m.id}">Edit</button></div></td>
@@ -702,6 +1047,10 @@ async function saveFolderAction() {
 function openMacroModal(id) {
   editingMacroId = id || null;
   $('#trigger-error').classList.remove('visible');
+
+  // Populate chain dropdown with other macros
+  populateChainDropdown(id);
+
   if (id) {
     const m = macros.find(x => x.id === id); if (!m) return;
     $('#modal-title').textContent = 'Edit Macro';
@@ -710,6 +1059,8 @@ function openMacroModal(id) {
     $('#macro-folder').value = m.folder || '';
     $('#macro-abbreviation').checked = m.isAbbreviation || false;
     if ($('#macro-richtext')) $('#macro-richtext').checked = m.richText || false;
+    if ($('#macro-chain')) $('#macro-chain').value = m.chainTo || '';
+    currentTags = m.tags ? [...m.tags] : [];
     $('#modal-delete').style.display = 'inline-flex';
     updatePreview();
   } else {
@@ -719,11 +1070,58 @@ function openMacroModal(id) {
     $('#macro-folder').value = currentFolder || '';
     $('#macro-abbreviation').checked = false;
     if ($('#macro-richtext')) $('#macro-richtext').checked = false;
+    if ($('#macro-chain')) $('#macro-chain').value = '';
+    currentTags = [];
     $('#modal-delete').style.display = 'none';
     $('#macro-preview').textContent = 'Type in the body above to see a preview...';
   }
+  renderTagsInModal();
+  $('#macro-tags-input').value = '';
+  resetHistory(); // Clear undo/redo history for new edit session
   $('#modal-macro').classList.add('visible');
   setTimeout(() => $('#macro-trigger').focus(), 100);
+}
+
+function populateChainDropdown(excludeId) {
+  const select = $('#macro-chain');
+  if (!select) return;
+
+  // Get all macros except the current one being edited
+  const availableMacros = macros
+    .filter(m => m.id !== excludeId && m.enabled !== false)
+    .sort((a, b) => a.trigger.localeCompare(b.trigger));
+
+  select.innerHTML = '<option value="">None</option>' +
+    availableMacros.map(m => `<option value="${esc(m.trigger)}">${esc(m.trigger)} — ${esc((m.body || '').substring(0, 30))}${m.body && m.body.length > 30 ? '...' : ''}</option>`).join('');
+}
+
+function renderTagsInModal() {
+  const tagsList = $('#tags-list');
+  if (!tagsList) return;
+  tagsList.innerHTML = currentTags.map(tag => `
+    <span class="tag-chip">
+      ${esc(tag)}
+      <button type="button" class="tag-remove" data-tag="${esc(tag)}">&times;</button>
+    </span>
+  `).join('');
+
+  // Add click handlers for remove buttons
+  tagsList.querySelectorAll('.tag-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tag = btn.dataset.tag;
+      currentTags = currentTags.filter(t => t !== tag);
+      renderTagsInModal();
+    });
+  });
+}
+
+function addTag(tag) {
+  tag = tag.trim().toLowerCase();
+  if (tag && !currentTags.includes(tag)) {
+    currentTags.push(tag);
+    renderTagsInModal();
+  }
 }
 window.openMacroModal = openMacroModal;
 
@@ -732,13 +1130,60 @@ function closeMacroModal() { $('#modal-macro').classList.remove('visible'); edit
 function updatePreview() {
   const body = $('#macro-body').value;
   if (!body) { $('#macro-preview').textContent = 'Type in the body above to see a preview...'; return; }
+
+  const now = new Date();
+  const pad = (n) => n.toString().padStart(2, '0');
+
+  // Helper for custom date formatting in preview
+  function formatPreviewDate(format) {
+    const tokens = {
+      'YYYY': now.getFullYear(),
+      'YY': now.getFullYear().toString().slice(-2),
+      'MM': pad(now.getMonth() + 1),
+      'M': now.getMonth() + 1,
+      'DD': pad(now.getDate()),
+      'D': now.getDate(),
+      'HH': pad(now.getHours()),
+      'H': now.getHours(),
+      'hh': pad(now.getHours() % 12 || 12),
+      'h': now.getHours() % 12 || 12,
+      'mm': pad(now.getMinutes()),
+      'm': now.getMinutes(),
+      'ss': pad(now.getSeconds()),
+      's': now.getSeconds(),
+      'A': now.getHours() >= 12 ? 'PM' : 'AM',
+      'a': now.getHours() >= 12 ? 'pm' : 'am',
+      'dddd': now.toLocaleDateString('en-US', { weekday: 'long' }),
+      'ddd': now.toLocaleDateString('en-US', { weekday: 'short' }),
+      'MMMM': now.toLocaleDateString('en-US', { month: 'long' }),
+      'MMM': now.toLocaleDateString('en-US', { month: 'short' })
+    };
+    const sortedTokens = Object.keys(tokens).sort((a, b) => b.length - a.length);
+    let result = format;
+    for (const token of sortedTokens) {
+      result = result.replace(new RegExp(token, 'g'), tokens[token]);
+    }
+    return result;
+  }
+
   let preview = body
     // Text wrappers
     .replace(/\{\{uppercase\}\}([\s\S]*?)\{\{\/uppercase\}\}/gi, (_, inner) => inner.toUpperCase())
     .replace(/\{\{lowercase\}\}([\s\S]*?)\{\{\/lowercase\}\}/gi, (_, inner) => inner.toLowerCase())
     // Simple variables
-    .replace(/\{\{date\}\}/gi, new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))
-    .replace(/\{\{time\}\}/gi, new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }))
+    .replace(/\{\{date\}\}/gi, now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))
+    .replace(/\{\{time\}\}/gi, now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }))
+    .replace(/\{\{weekday\}\}/gi, now.toLocaleDateString('en-US', { weekday: 'long' }))
+    .replace(/\{\{month\}\}/gi, now.toLocaleDateString('en-US', { month: 'long' }))
+    .replace(/\{\{year\}\}/gi, now.getFullYear().toString())
+    .replace(/\{\{domain\}\}/gi, '[current domain]')
+    .replace(/\{\{url\}\}/gi, '[current URL]')
+    .replace(/\{\{title\}\}/gi, '[page title]')
+    .replace(/\{\{selection\}\}/gi, '[selected text]')
+    // Custom format dates
+    .replace(/\{\{date:([^}]+)\}\}/gi, (_, format) => formatPreviewDate(format))
+    .replace(/\{\{time:([^}]+)\}\}/gi, (_, format) => formatPreviewDate(format))
+    .replace(/\{\{datetime:([^}]+)\}\}/gi, (_, format) => formatPreviewDate(format))
     // Relative dates
     .replace(/\{\{date([+-])(\d+)\}\}/gi, (_, op, days) => {
       const d = new Date();
@@ -784,16 +1229,18 @@ function saveMacro() {
   const folder = $('#macro-folder').value.trim() || 'General';
   const isAbbreviation = $('#macro-abbreviation').checked;
   const richText = $('#macro-richtext') ? $('#macro-richtext').checked : false;
+  const chainTo = $('#macro-chain') ? $('#macro-chain').value : '';
+  const tags = [...currentTags];
   if (!trigger || !body) return alert('Trigger and body are required.');
   if (checkDuplicate()) return alert('A macro with this trigger already exists.');
 
   if (editingMacroId) {
     const m = macros.find(x => x.id === editingMacroId);
-    if (m) { m.trigger = trigger; m.body = body; m.folder = folder; m.isAbbreviation = isAbbreviation; m.richText = richText; m.updatedAt = Date.now(); }
+    if (m) { m.trigger = trigger; m.body = body; m.folder = folder; m.isAbbreviation = isAbbreviation; m.richText = richText; m.chainTo = chainTo; m.tags = tags; m.updatedAt = Date.now(); }
   } else {
     macros.push({
       id: 'macro-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-      trigger, body, folder, isAbbreviation, richText, enabled: true, useCount: 0,
+      trigger, body, folder, isAbbreviation, richText, chainTo, tags, enabled: true, useCount: 0,
       createdAt: Date.now(), updatedAt: Date.now()
     });
   }
@@ -875,27 +1322,279 @@ function importFile(file) {
   const reader = new FileReader();
   reader.onload = async (e) => {
     const text = e.target.result;
-    if (file.name.endsWith('.csv')) {
-      const result = await chrome.runtime.sendMessage({ type: 'IMPORT_CSV', csv: text });
-      if (result.success) {
-        const { macros: updated } = await chrome.storage.local.get(['macros']);
-        macros = updated || [];
-        renderAll(); alert(`Imported ${result.count} macros from CSV!`);
+    const fileName = file.name.toLowerCase();
+
+    // Detect file type and parse accordingly
+    if (fileName.endsWith('.yaml') || fileName.endsWith('.yml')) {
+      // Espanso YAML format
+      const imported = parseEspansoYaml(text, file.name);
+      if (imported.length > 0) {
+        macros = [...macros, ...imported];
+        await saveMacros();
+        renderAll();
+        showSuccessToast(`Imported ${imported.length} macros from Espanso!`);
       } else {
-        alert(result.error || 'Invalid CSV file.');
+        alert('No valid macros found in Espanso file.');
+      }
+    } else if (fileName.endsWith('.csv')) {
+      // Check if it's TextExpander format (has specific headers or structure)
+      const isTextExpander = text.includes('abbreviation') || isTextExpanderCSV(text);
+      if (isTextExpander) {
+        const imported = parseTextExpanderCSV(text);
+        if (imported.length > 0) {
+          macros = [...macros, ...imported];
+          await saveMacros();
+          renderAll();
+          showSuccessToast(`Imported ${imported.length} macros from TextExpander!`);
+        } else {
+          alert('No valid macros found in TextExpander CSV.');
+        }
+      } else {
+        // Standard SnapText CSV import
+        const result = await chrome.runtime.sendMessage({ type: 'IMPORT_CSV', csv: text });
+        if (result.success) {
+          const { macros: updated } = await chrome.storage.local.get(['macros']);
+          macros = updated || [];
+          renderAll();
+          showSuccessToast(`Imported ${result.count} macros from CSV!`);
+        } else {
+          alert(result.error || 'Invalid CSV file.');
+        }
       }
     } else {
+      // JSON format
       try {
         const imported = JSON.parse(text);
         if (!Array.isArray(imported)) throw new Error();
         macros = [...macros, ...imported.map(m => ({
-          ...m, id: m.id || 'macro-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)
+          ...m, id: m.id || crypto.randomUUID()
         }))];
-        await saveMacros(); renderAll(); alert(`Imported ${imported.length} macros!`);
-      } catch { alert('Invalid JSON file.'); }
+        await saveMacros();
+        renderAll();
+        showSuccessToast(`Imported ${imported.length} macros!`);
+      } catch {
+        alert('Invalid JSON file.');
+      }
     }
   };
   reader.readAsText(file);
+}
+
+// ── TextExpander CSV Parser ──────────────────────────────────────────
+function isTextExpanderCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return false;
+  // TextExpander CSV typically has: abbreviation, plain text content, label
+  const firstLine = lines[0].toLowerCase();
+  return firstLine.includes('abbreviation') || firstLine.includes('snippet') ||
+         (lines.length > 1 && lines[1].split(',').length >= 2);
+}
+
+function parseTextExpanderCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  const imported = [];
+  const hasHeader = lines[0].toLowerCase().includes('abbreviation') ||
+                    lines[0].toLowerCase().includes('snippet');
+  const startIdx = hasHeader ? 1 : 0;
+
+  for (let i = startIdx; i < lines.length; i++) {
+    const fields = parseCSVLine(lines[i]);
+    if (fields.length >= 2) {
+      const trigger = (fields[0] || '').trim().replace(/^[;:\/]/, ''); // Remove common prefixes
+      const body = (fields[1] || '').trim();
+      const folder = (fields[2] || 'Imported').trim() || 'Imported';
+
+      if (trigger && body) {
+        imported.push({
+          id: crypto.randomUUID(),
+          trigger: trigger,
+          body: convertTextExpanderVariables(body),
+          folder: folder,
+          enabled: true,
+          useCount: 0,
+          tags: ['imported', 'textexpander'],
+          createdAt: Date.now()
+        });
+      }
+    }
+  }
+
+  return imported;
+}
+
+function parseCSVLine(line) {
+  const fields = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      fields.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  fields.push(current);
+
+  return fields.map(f => f.replace(/^"|"$/g, '').trim());
+}
+
+function convertTextExpanderVariables(text) {
+  // Convert TextExpander variables to SnapText format
+  return text
+    .replace(/%clipboard/gi, '{{clipboard}}')
+    .replace(/%\|/g, '{{cursor}}')
+    .replace(/%d/g, '{{date}}')
+    .replace(/%t/g, '{{time}}')
+    .replace(/%snippet:([^%]+)%/gi, '{{macro:$1}}')
+    .replace(/%fill:([^%]+)%/gi, '{{input:$1}}')
+    .replace(/%fillpopup:name=([^:]+):default=([^%]+)%/gi, '{{input:$1||$2}}')
+    .replace(/%fillpopup:name=([^%]+)%/gi, '{{input:$1}}');
+}
+
+// ── Espanso YAML Parser ──────────────────────────────────────────────
+function parseEspansoYaml(text, fileName) {
+  const imported = [];
+
+  // Infer folder from filename (e.g., "email.yml" -> "Email")
+  const folderFromFile = fileName
+    .replace(/\.(ya?ml)$/i, '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+
+  // Simple YAML parser for Espanso format
+  // Espanso format:
+  // matches:
+  //   - trigger: ":hello"
+  //     replace: "Hello World"
+  //   - trigger: ":date"
+  //     replace: "{{date}}"
+
+  const lines = text.split('\n');
+  let currentMatch = null;
+  let inMatches = false;
+  let indentLevel = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Skip comments and empty lines
+    if (trimmed.startsWith('#') || trimmed === '') continue;
+
+    // Detect matches section
+    if (trimmed === 'matches:') {
+      inMatches = true;
+      continue;
+    }
+
+    if (!inMatches) continue;
+
+    // New match starts with "- trigger:"
+    if (trimmed.startsWith('- trigger:') || trimmed.startsWith('-trigger:')) {
+      // Save previous match
+      if (currentMatch && currentMatch.trigger && currentMatch.body) {
+        imported.push(createMacroFromEspanso(currentMatch, folderFromFile));
+      }
+      currentMatch = {
+        trigger: extractYamlValue(trimmed.replace(/^-\s*/, ''))
+      };
+    } else if (trimmed.startsWith('trigger:') && !trimmed.startsWith('- trigger:')) {
+      if (currentMatch) {
+        currentMatch.trigger = extractYamlValue(trimmed);
+      }
+    } else if (trimmed.startsWith('replace:')) {
+      if (currentMatch) {
+        const value = extractYamlValue(trimmed);
+        // Check for multiline string (|)
+        if (value === '|' || value === '|-') {
+          // Collect multiline content
+          const bodyLines = [];
+          const baseIndent = line.search(/\S/);
+          let j = i + 1;
+          while (j < lines.length) {
+            const nextLine = lines[j];
+            const nextIndent = nextLine.search(/\S/);
+            if (nextLine.trim() === '' || nextIndent > baseIndent) {
+              bodyLines.push(nextLine.substring(baseIndent + 2) || '');
+              j++;
+            } else {
+              break;
+            }
+          }
+          currentMatch.body = bodyLines.join('\n').trim();
+          i = j - 1; // Adjust line counter
+        } else {
+          currentMatch.body = value;
+        }
+      }
+    } else if (trimmed.startsWith('label:') || trimmed.startsWith('description:')) {
+      if (currentMatch) {
+        currentMatch.label = extractYamlValue(trimmed);
+      }
+    } else if (trimmed.startsWith('word:')) {
+      if (currentMatch) {
+        currentMatch.word = extractYamlValue(trimmed) === 'true';
+      }
+    }
+  }
+
+  // Don't forget the last match
+  if (currentMatch && currentMatch.trigger && currentMatch.body) {
+    imported.push(createMacroFromEspanso(currentMatch, folderFromFile));
+  }
+
+  return imported;
+}
+
+function extractYamlValue(line) {
+  const colonIdx = line.indexOf(':');
+  if (colonIdx === -1) return '';
+  let value = line.substring(colonIdx + 1).trim();
+  // Remove quotes
+  if ((value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))) {
+    value = value.slice(1, -1);
+  }
+  // Handle escape sequences
+  value = value.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  return value;
+}
+
+function createMacroFromEspanso(match, folder) {
+  // Remove leading colon from trigger if present (Espanso convention)
+  let trigger = match.trigger.replace(/^[:;]/, '');
+
+  // Convert Espanso variables to SnapText format
+  let body = match.body
+    .replace(/\{\{clipboard\}\}/gi, '{{clipboard}}')
+    .replace(/\{\{date\}\}/gi, '{{date}}')
+    .replace(/\{\{time\}\}/gi, '{{time}}')
+    .replace(/\{\{cursor\}\}/gi, '{{cursor}}')
+    .replace(/\$\|?\$/g, '{{cursor}}')
+    .replace(/\{\{output\}\}/gi, '{{cursor}}');
+
+  return {
+    id: crypto.randomUUID(),
+    trigger: trigger,
+    body: body,
+    folder: folder || 'Imported',
+    enabled: true,
+    useCount: 0,
+    tags: ['imported', 'espanso'],
+    createdAt: Date.now()
+  };
 }
 
 // ── Cloud sharing ──────────────────────────────────────────────────
@@ -1186,6 +1885,220 @@ async function loadExplore(query) {
       }
     });
   });
+}
+
+// ── Snippet Templates ────────────────────────────────────────────────
+const TEMPLATE_PACKS = [
+  {
+    id: 'email',
+    name: 'Email Essentials',
+    description: 'Common email responses and templates for everyday communication',
+    icon: '&#128231;',
+    color: '#3B82F6',
+    macros: [
+      { trigger: 'ty', body: 'Thank you for reaching out! I appreciate you taking the time to contact me.', folder: 'Email' },
+      { trigger: 'fup', body: 'Hi {{input:Name}},\n\nI wanted to follow up on our previous conversation. Please let me know if you have any questions or need any additional information.\n\nBest regards', folder: 'Email' },
+      { trigger: 'intro', body: 'Hi {{input:Name}},\n\nI hope this email finds you well. My name is {{input:Your Name}} and I\'m reaching out regarding {{input:Topic}}.\n\n{{cursor}}\n\nBest regards', folder: 'Email' },
+      { trigger: 'avail', body: 'I\'m available on the following dates/times:\n\n- {{input:Option 1}}\n- {{input:Option 2}}\n- {{input:Option 3}}\n\nPlease let me know what works best for you.', folder: 'Email' },
+      { trigger: 'ack', body: 'Thank you for your email. I\'ve received your message and will get back to you within {{input:Timeframe||24 hours}}.', folder: 'Email' },
+      { trigger: 'ooo', body: 'Thank you for your email. I am currently out of the office and will return on {{input:Return Date}}. I will respond to your message upon my return.\n\nFor urgent matters, please contact {{input:Contact Name}} at {{input:Contact Email}}.', folder: 'Email' }
+    ]
+  },
+  {
+    id: 'dev',
+    name: 'Developer Toolkit',
+    description: 'Templates for code reviews, PRs, commits, and technical communication',
+    icon: '&#128187;',
+    color: '#10B981',
+    macros: [
+      { trigger: 'prdesc', body: '## Summary\n{{input:Brief description}}\n\n## Changes\n- {{cursor}}\n\n## Testing\n- [ ] Unit tests added/updated\n- [ ] Manual testing completed\n\n## Screenshots (if applicable)\n', folder: 'Dev' },
+      { trigger: 'commit', body: '{{select:Type||feat|fix|docs|style|refactor|test|chore}}: {{input:Short description}}\n\n{{input:Longer description (optional)}}', folder: 'Dev' },
+      { trigger: 'review', body: '## Code Review\n\n**Overall:** {{select:Rating||Approve|Request Changes|Comment}}\n\n### What I liked\n- {{cursor}}\n\n### Suggestions\n- \n\n### Questions\n- ', folder: 'Dev' },
+      { trigger: 'bug', body: '## Bug Report\n\n**Description:** {{input:What happened?}}\n\n**Expected:** {{input:What should happen?}}\n\n**Steps to reproduce:**\n1. {{cursor}}\n\n**Environment:**\n- OS: {{input:OS}}\n- Browser: {{input:Browser}}\n- Version: {{input:Version}}', folder: 'Dev' },
+      { trigger: 'todo', body: '// TODO({{input:Your name||you}}): {{input:Description}} - {{date}}', folder: 'Dev' },
+      { trigger: 'fixme', body: '// FIXME: {{input:Description}} - {{date}}', folder: 'Dev' }
+    ]
+  },
+  {
+    id: 'support',
+    name: 'Customer Support',
+    description: 'Professional responses for customer service and support teams',
+    icon: '&#127919;',
+    color: '#8B5CF6',
+    macros: [
+      { trigger: 'hello', body: 'Hi {{input:Customer Name}},\n\nThank you for contacting our support team. I\'d be happy to help you with {{input:Issue}}.\n\n{{cursor}}\n\nPlease let me know if you have any questions.\n\nBest regards', folder: 'Support' },
+      { trigger: 'resolve', body: 'Hi {{input:Customer Name}},\n\nGreat news! I\'ve {{input:Resolution details}}.\n\nYour issue has been resolved. Please let me know if there\'s anything else I can help you with.\n\nBest regards', folder: 'Support' },
+      { trigger: 'escalate', body: 'Hi {{input:Customer Name}},\n\nThank you for your patience. I\'ve escalated your case to our {{input:Team||specialized team}} for further assistance.\n\nYou\'ll receive an update within {{input:Timeframe||24-48 hours}}.\n\nReference: #{{input:Ticket Number}}\n\nBest regards', folder: 'Support' },
+      { trigger: 'sorry', body: 'Hi {{input:Customer Name}},\n\nI sincerely apologize for the inconvenience this has caused. I understand how frustrating this must be, and I want to assure you that we\'re working to resolve this as quickly as possible.\n\n{{cursor}}\n\nThank you for your patience and understanding.', folder: 'Support' },
+      { trigger: 'refund', body: 'Hi {{input:Customer Name}},\n\nI\'ve processed your refund of {{input:Amount}}. You should see it reflected in your account within {{input:Timeframe||5-7 business days}}.\n\nRefund Reference: {{input:Reference Number}}\n\nPlease let me know if you have any questions.', folder: 'Support' }
+    ]
+  },
+  {
+    id: 'meeting',
+    name: 'Meeting Templates',
+    description: 'Agendas, notes, and follow-up templates for productive meetings',
+    icon: '&#128197;',
+    color: '#F59E0B',
+    macros: [
+      { trigger: 'agenda', body: '# Meeting Agenda\n**Date:** {{date}}\n**Time:** {{input:Time}}\n**Attendees:** {{input:Names}}\n\n## Topics\n1. {{cursor}}\n2. \n3. \n\n## Action Items from Last Meeting\n- \n\n## Notes\n', folder: 'Meetings' },
+      { trigger: 'notes', body: '# Meeting Notes - {{date}}\n\n**Attendees:** {{input:Names}}\n\n## Discussion\n{{cursor}}\n\n## Decisions Made\n- \n\n## Action Items\n- [ ] {{input:Task}} - @{{input:Owner}}\n\n## Next Steps\n', folder: 'Meetings' },
+      { trigger: 'mtgfup', body: 'Hi team,\n\nThank you for joining today\'s meeting. Here\'s a quick summary:\n\n**Key Decisions:**\n- {{cursor}}\n\n**Action Items:**\n- [ ] \n\n**Next Meeting:** {{input:Date/Time}}\n\nPlease let me know if I missed anything.\n\nBest', folder: 'Meetings' },
+      { trigger: '1on1', body: '# 1:1 Meeting - {{date}}\n\n## Check-in\n- How are you doing?\n- Any blockers or concerns?\n\n## Updates\n{{cursor}}\n\n## Goals Review\n- \n\n## Feedback\n- \n\n## Action Items\n- ', folder: 'Meetings' }
+    ]
+  },
+  {
+    id: 'fun',
+    name: 'Fun & Emoji',
+    description: 'Kaomoji, emoticons, and fun text for casual conversations',
+    icon: '&#127881;',
+    color: '#EC4899',
+    macros: [
+      { trigger: 'shrug', body: '¯\\_(ツ)_/¯', folder: 'Fun' },
+      { trigger: 'tableflip', body: '(╯°□°)╯︵ ┻━┻', folder: 'Fun' },
+      { trigger: 'unflip', body: '┬─┬ノ( º _ ºノ)', folder: 'Fun' },
+      { trigger: 'lenny', body: '( ͡° ͜ʖ ͡°)', folder: 'Fun' },
+      { trigger: 'disapprove', body: 'ಠ_ಠ', folder: 'Fun' },
+      { trigger: 'sparkles', body: '✨', folder: 'Fun' },
+      { trigger: 'check', body: '✓', folder: 'Fun' },
+      { trigger: 'arrow', body: '→', folder: 'Fun' }
+    ]
+  },
+  {
+    id: 'sales',
+    name: 'Sales Outreach',
+    description: 'Cold outreach, follow-ups, and closing templates for sales teams',
+    icon: '&#128176;',
+    color: '#EF4444',
+    macros: [
+      { trigger: 'cold', body: 'Hi {{input:Name}},\n\nI noticed that {{input:Observation about their company}}. At {{input:Your Company}}, we help companies like yours {{input:Value proposition}}.\n\nWould you be open to a quick 15-minute call to explore if we could help?\n\n{{cursor}}\n\nBest regards', folder: 'Sales' },
+      { trigger: 'demo', body: 'Hi {{input:Name}},\n\nThank you for your interest in {{input:Product}}! I\'d love to show you how it can {{input:Key benefit}}.\n\nAre you available for a {{input:Duration||30-minute}} demo this week? Here are some times that work for me:\n\n- {{input:Option 1}}\n- {{input:Option 2}}\n\nLooking forward to connecting!', folder: 'Sales' },
+      { trigger: 'proposal', body: 'Hi {{input:Name}},\n\nAs discussed, I\'ve prepared a proposal for {{input:Project/Service}}.\n\n**Investment:** {{input:Price}}\n**Timeline:** {{input:Timeline}}\n\nThis includes:\n- {{cursor}}\n\nPlease let me know if you have any questions.\n\nBest regards', folder: 'Sales' },
+      { trigger: 'close', body: 'Hi {{input:Name}},\n\nI wanted to follow up on our conversation about {{input:Product/Service}}. Based on our discussion, I believe we\'re a great fit because {{input:Key reasons}}.\n\nAre you ready to move forward? I can have the agreement ready for you today.\n\nBest regards', folder: 'Sales' }
+    ]
+  }
+];
+
+function renderTemplates() {
+  const grid = $('#template-grid');
+  if (!grid) return;
+
+  grid.innerHTML = TEMPLATE_PACKS.map(pack => `
+    <div class="template-card" data-pack="${pack.id}">
+      <div class="template-icon" style="background:${pack.color};">${pack.icon}</div>
+      <div class="template-info">
+        <div class="template-name">${esc(pack.name)}</div>
+        <div class="template-desc">${esc(pack.description)}</div>
+        <div class="template-meta">${pack.macros.length} snippets</div>
+      </div>
+      <div class="template-actions">
+        <button class="btn btn-sm" data-preview-pack="${pack.id}">Preview</button>
+        <button class="btn btn-sm btn-primary" data-install-pack="${pack.id}">Install</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Preview handlers
+  grid.querySelectorAll('[data-preview-pack]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const packId = btn.dataset.previewPack;
+      previewTemplatePack(packId);
+    });
+  });
+
+  // Install handlers
+  grid.querySelectorAll('[data-install-pack]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const packId = btn.dataset.installPack;
+      await installTemplatePack(packId, btn);
+    });
+  });
+}
+
+function previewTemplatePack(packId) {
+  const pack = TEMPLATE_PACKS.find(p => p.id === packId);
+  if (!pack) return;
+
+  const preview = pack.macros.map(m =>
+    `<div class="template-preview-item">
+      <div class="tpi-trigger">${esc(m.trigger)}</div>
+      <div class="tpi-body">${esc(m.body.slice(0, 100))}${m.body.length > 100 ? '...' : ''}</div>
+    </div>`
+  ).join('');
+
+  // Show in a simple alert for now (could be a modal)
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay visible';
+  modal.id = 'modal-template-preview';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:550px;">
+      <div class="modal-header">
+        <div class="modal-title">${pack.icon} ${esc(pack.name)}</div>
+        <button class="modal-close" id="template-preview-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom:12px;color:var(--muted);">${esc(pack.description)}</p>
+        <div class="template-preview-list">${preview}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="template-preview-cancel">Close</button>
+        <button class="btn btn-primary" id="template-preview-install">Install Pack</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.querySelector('#template-preview-close').addEventListener('click', close);
+  modal.querySelector('#template-preview-cancel').addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+  modal.querySelector('#template-preview-install').addEventListener('click', async () => {
+    const btn = modal.querySelector('#template-preview-install');
+    await installTemplatePack(packId, btn);
+    close();
+  });
+}
+
+async function installTemplatePack(packId, btn) {
+  const pack = TEMPLATE_PACKS.find(p => p.id === packId);
+  if (!pack) return;
+
+  setButtonLoading(btn, true);
+
+  // Create macros with unique IDs
+  const newMacros = pack.macros.map(m => ({
+    id: crypto.randomUUID(),
+    trigger: m.trigger,
+    body: m.body,
+    folder: m.folder,
+    enabled: true,
+    useCount: 0,
+    tags: ['template', pack.id],
+    createdAt: Date.now()
+  }));
+
+  // Check for duplicate triggers
+  const existingTriggers = new Set(macros.map(m => m.trigger));
+  const duplicates = newMacros.filter(m => existingTriggers.has(m.trigger));
+
+  if (duplicates.length > 0) {
+    const confirmMsg = `${duplicates.length} trigger(s) already exist (${duplicates.map(d => d.trigger).join(', ')}). Install anyway? Existing macros will be kept.`;
+    if (!confirm(confirmMsg)) {
+      setButtonLoading(btn, false);
+      return;
+    }
+    // Filter out duplicates
+    const filteredMacros = newMacros.filter(m => !existingTriggers.has(m.trigger));
+    macros = [...macros, ...filteredMacros];
+  } else {
+    macros = [...macros, ...newMacros];
+  }
+
+  await saveMacros();
+  renderAll();
+  setButtonLoading(btn, false);
+  btn.textContent = 'Installed!';
+  btn.disabled = true;
+  showSuccessToast(`Installed ${pack.name} (${newMacros.length} snippets)`);
 }
 
 async function loadMyShares() {
@@ -1536,12 +2449,13 @@ async function saveSettings() {
 
 // ── View switching ──────────────────────────────────────────────────
 function showShareTab(tab) {
-  ['publish', 'import', 'explore', 'my-shares'].forEach(t => {
+  ['publish', 'import', 'explore', 'templates', 'my-shares'].forEach(t => {
     const el = $(`#stab-${t}`);
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
   $$('.share-tab').forEach(t => t.classList.toggle('active', t.dataset.stab === tab));
   if (tab === 'explore') loadExplore();
+  if (tab === 'templates') renderTemplates();
   if (tab === 'my-shares') loadMyShares();
 }
 
@@ -1580,8 +2494,126 @@ $$('.filter-chip').forEach(chip => {
   });
 });
 
-$('#macro-body').addEventListener('input', updatePreview);
+// ── Undo/Redo for macro body ──────────────────────────────────────────
+let editorHistory = [];
+let historyIndex = -1;
+const MAX_HISTORY = 50;
+let lastHistoryTime = 0;
+
+function pushHistory(value) {
+  const now = Date.now();
+  // Debounce: don't push if less than 300ms since last push and value is similar
+  if (now - lastHistoryTime < 300 && historyIndex >= 0) {
+    editorHistory[historyIndex] = value;
+  } else {
+    // Remove any redo history
+    editorHistory = editorHistory.slice(0, historyIndex + 1);
+    editorHistory.push(value);
+    if (editorHistory.length > MAX_HISTORY) {
+      editorHistory.shift();
+    }
+    historyIndex = editorHistory.length - 1;
+  }
+  lastHistoryTime = now;
+  updateUndoRedoButtons();
+}
+
+function undo() {
+  if (historyIndex > 0) {
+    historyIndex--;
+    const textarea = $('#macro-body');
+    textarea.value = editorHistory[historyIndex];
+    updatePreview();
+    updateUndoRedoButtons();
+  }
+}
+
+function redo() {
+  if (historyIndex < editorHistory.length - 1) {
+    historyIndex++;
+    const textarea = $('#macro-body');
+    textarea.value = editorHistory[historyIndex];
+    updatePreview();
+    updateUndoRedoButtons();
+  }
+}
+
+function updateUndoRedoButtons() {
+  const undoBtn = $('#btn-undo');
+  const redoBtn = $('#btn-redo');
+  if (undoBtn) undoBtn.disabled = historyIndex <= 0;
+  if (redoBtn) redoBtn.disabled = historyIndex >= editorHistory.length - 1;
+}
+
+function resetHistory() {
+  editorHistory = [];
+  historyIndex = -1;
+  updateUndoRedoButtons();
+}
+
+$('#macro-body').addEventListener('input', (e) => {
+  pushHistory(e.target.value);
+  updatePreview();
+});
+
+$('#macro-body').addEventListener('focus', () => {
+  // Initialize history if empty
+  if (editorHistory.length === 0) {
+    pushHistory($('#macro-body').value);
+  }
+});
+
+$('#macro-body').addEventListener('keydown', (e) => {
+  // Ctrl+Z for undo, Ctrl+Y or Ctrl+Shift+Z for redo
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+    } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+      e.preventDefault();
+      redo();
+    }
+  }
+});
+
+$('#btn-undo')?.addEventListener('click', undo);
+$('#btn-redo')?.addEventListener('click', redo);
+
 $('#macro-trigger').addEventListener('input', checkDuplicate);
+
+// Tags input
+$('#macro-tags-input')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const input = e.target;
+    const value = input.value.replace(',', '').trim();
+    if (value) {
+      addTag(value);
+      input.value = '';
+    }
+  } else if (e.key === 'Backspace' && e.target.value === '' && currentTags.length > 0) {
+    // Remove last tag when backspace on empty input
+    currentTags.pop();
+    renderTagsInModal();
+  }
+});
+
+$('#macro-tags-input')?.addEventListener('blur', (e) => {
+  // Add tag when input loses focus
+  const value = e.target.value.trim();
+  if (value) {
+    // Split by comma in case multiple tags were pasted
+    value.split(',').forEach(t => addTag(t));
+    e.target.value = '';
+  }
+});
+
+$('#tags-input-container')?.addEventListener('click', (e) => {
+  // Focus the input when clicking the container
+  if (e.target === $('#tags-input-container') || e.target === $('#tags-list')) {
+    $('#macro-tags-input')?.focus();
+  }
+});
 
 // Folder modal
 $('#btn-add-folder').addEventListener('click', () => openFolderModal());
@@ -1701,12 +2733,13 @@ async function selectTeam(teamId) {
 }
 
 function showView(view) {
-  ['macros', 'share', 'settings', 'account', 'team'].forEach(v => {
+  ['macros', 'analytics', 'share', 'settings', 'account', 'team'].forEach(v => {
     const el = $(`#view-${v}`);
     if (el) el.style.display = v === view ? 'block' : 'none';
   });
   if (view !== 'macros') $('#stats-row').style.display = 'none';
   else $('#stats-row').style.display = '';
+  if (view === 'analytics') renderAnalytics();
 }
 
 function renderTeamView() {
@@ -2070,12 +3103,14 @@ $('#team-settings-code').addEventListener('click', () => {
   }
 });
 
-// Override init to include teams
-const originalInit = init;
-async function init() {
-  await originalInit();
-  await loadTeams();
-}
+// Extend init to include teams
+(function() {
+  const originalInit = init;
+  window.init = async function() {
+    await originalInit();
+    await loadTeams();
+  };
+})();
 
 // ── Keyboard Navigation ─────────────────────────────────────────────────
 let selectedRowIndex = -1;
@@ -2085,7 +3120,41 @@ function initKeyboardNavigation() {
     // Only handle navigation when not in input/modal
     const activeEl = document.activeElement;
     const inInput = activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable;
+    const helpModal = $('#modal-keyboard-help');
+    const helpModalOpen = helpModal && helpModal.classList.contains('visible');
     const inModal = activeEl.closest('.modal-overlay.visible');
+
+    // Allow Escape and ? even in modals
+    if (e.key === 'Escape') {
+      // Close help modal if open
+      if (helpModalOpen) {
+        e.preventDefault();
+        closeKeyboardHelpModal();
+        return;
+      }
+      // Close any open modal
+      const openModal = document.querySelector('.modal-overlay.visible');
+      if (openModal) {
+        e.preventDefault();
+        openModal.classList.remove('visible');
+        return;
+      }
+      // Clear row selection
+      if (selectedRowIndex >= 0) {
+        e.preventDefault();
+        selectedRowIndex = -1;
+        const table = document.querySelector('.macro-table tbody');
+        if (table) highlightRow(table.querySelectorAll('tr'), -1);
+        return;
+      }
+    }
+
+    // Show keyboard help with ?
+    if (e.key === '?' && !inInput) {
+      e.preventDefault();
+      openKeyboardHelpModal();
+      return;
+    }
 
     if (inInput || inModal) return;
 
@@ -2093,26 +3162,51 @@ function initKeyboardNavigation() {
     if (!table) return;
 
     const rows = table.querySelectorAll('tr');
-    if (rows.length === 0) return;
 
     switch (e.key) {
       case 'ArrowDown':
+      case 'j':
         e.preventDefault();
-        selectedRowIndex = Math.min(selectedRowIndex + 1, rows.length - 1);
-        highlightRow(rows, selectedRowIndex);
+        if (rows.length > 0) {
+          selectedRowIndex = Math.min(selectedRowIndex + 1, rows.length - 1);
+          highlightRow(rows, selectedRowIndex);
+        }
         break;
 
       case 'ArrowUp':
+      case 'k':
         e.preventDefault();
-        selectedRowIndex = Math.max(selectedRowIndex - 1, 0);
-        highlightRow(rows, selectedRowIndex);
+        if (rows.length > 0) {
+          selectedRowIndex = Math.max(selectedRowIndex - 1, 0);
+          highlightRow(rows, selectedRowIndex);
+        }
         break;
 
       case 'Enter':
+      case 'e':
         if (selectedRowIndex >= 0 && selectedRowIndex < rows.length) {
           e.preventDefault();
           const editBtn = rows[selectedRowIndex].querySelector('[data-edit]');
           if (editBtn) editBtn.click();
+        }
+        break;
+
+      case 'd':
+        if (selectedRowIndex >= 0 && selectedRowIndex < rows.length) {
+          e.preventDefault();
+          const deleteBtn = rows[selectedRowIndex].querySelector('[data-delete]');
+          if (deleteBtn) deleteBtn.click();
+        }
+        break;
+
+      case ' ':
+        // Toggle enabled/disabled
+        if (selectedRowIndex >= 0 && selectedRowIndex < rows.length) {
+          e.preventDefault();
+          const toggleBtn = rows[selectedRowIndex].querySelector('.toggle input');
+          if (toggleBtn) {
+            toggleBtn.click();
+          }
         }
         break;
 
@@ -2130,6 +3224,24 @@ function initKeyboardNavigation() {
           openMacroModal();
         }
         break;
+
+      case 'g':
+        // Go to top
+        e.preventDefault();
+        if (rows.length > 0) {
+          selectedRowIndex = 0;
+          highlightRow(rows, selectedRowIndex);
+        }
+        break;
+
+      case 'G':
+        // Go to bottom
+        e.preventDefault();
+        if (rows.length > 0) {
+          selectedRowIndex = rows.length - 1;
+          highlightRow(rows, selectedRowIndex);
+        }
+        break;
     }
   });
 }
@@ -2137,14 +3249,22 @@ function initKeyboardNavigation() {
 function highlightRow(rows, index) {
   rows.forEach((row, i) => {
     if (i === index) {
-      row.style.outline = '2px solid var(--blue)';
-      row.style.outlineOffset = '-2px';
+      row.classList.add('keyboard-selected');
       row.scrollIntoView({ block: 'nearest' });
     } else {
-      row.style.outline = '';
-      row.style.outlineOffset = '';
+      row.classList.remove('keyboard-selected');
     }
   });
+}
+
+function openKeyboardHelpModal() {
+  const modal = $('#modal-keyboard-help');
+  if (modal) modal.classList.add('visible');
+}
+
+function closeKeyboardHelpModal() {
+  const modal = $('#modal-keyboard-help');
+  if (modal) modal.classList.remove('visible');
 }
 
 // Reset selection when table is re-rendered
@@ -2154,7 +3274,18 @@ renderMacroTable = function() {
   originalRenderMacroTable();
 };
 
-// Initialize keyboard navigation
-document.addEventListener('DOMContentLoaded', initKeyboardNavigation);
+// Initialize keyboard navigation and help modal events
+document.addEventListener('DOMContentLoaded', () => {
+  initKeyboardNavigation();
+
+  // Help modal events
+  const helpModal = $('#modal-keyboard-help');
+  if (helpModal) {
+    helpModal.addEventListener('click', (e) => {
+      if (e.target === helpModal) closeKeyboardHelpModal();
+    });
+    $('#keyboard-help-close')?.addEventListener('click', closeKeyboardHelpModal);
+  }
+});
 
 init();

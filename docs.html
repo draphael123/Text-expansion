@@ -4,7 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Documentation — SnapText</title>
-  <meta name="description" content="Complete documentation for SnapText. Learn about variables, keyboard shortcuts, cloud sync, sharing macros, and more." />
+  <meta name="description" content="Complete documentation for SnapText. Learn about variables, keyboard shortcuts, cloud sync, templates, analytics, and more." />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Documentation — SnapText" />
+  <meta property="og:description" content="Complete documentation for SnapText. Learn about variables, keyboard shortcuts, cloud sync, templates, analytics, and more." />
+  <meta property="og:image" content="icons/icon128.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Documentation — SnapText" />
+  <meta name="twitter:description" content="Complete documentation for SnapText. Learn about all features." />
+
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#2563EB" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -287,14 +299,19 @@
           <li><a href="#auto-suggest">Auto-Suggest</a></li>
           <li><a href="#abbreviation">Abbreviation Mode</a></li>
           <li><a href="#folders">Folder Management</a></li>
+          <li><a href="#tags">Tags</a></li>
+          <li><a href="#templates">Templates</a></li>
+          <li><a href="#multi-cursor">Multi-Cursor</a></li>
+          <li><a href="#chaining">Snippet Chaining</a></li>
+          <li><a href="#analytics">Usage Analytics</a></li>
         </ul>
       </div>
       <div class="docs-nav-section">
         <div class="docs-nav-title">Cloud & Sync</div>
         <ul class="docs-nav-links">
           <li><a href="#cloud-setup">Setting Up Cloud Sync</a></li>
-          <li><a href="#sharing">Sharing Macros</a></li>
           <li><a href="#import-export">Import & Export</a></li>
+          <li><a href="#import-tools">Import from Other Tools</a></li>
         </ul>
       </div>
       <div class="docs-nav-section">
@@ -345,10 +362,28 @@
       <p>Variables are placeholders that get replaced with dynamic content when the macro expands.</p>
       <table class="variable-table">
         <tr><th>Variable</th><th>Description</th><th>Example Output</th></tr>
-        <tr><td><code>{{date}}</code></td><td>Current date</td><td>April 6, 2026</td></tr>
+        <tr><td><code>{{date}}</code></td><td>Current date</td><td>April 9, 2026</td></tr>
         <tr><td><code>{{time}}</code></td><td>Current time</td><td>2:30 PM</td></tr>
+        <tr><td><code>{{weekday}}</code></td><td>Day of the week</td><td>Wednesday</td></tr>
+        <tr><td><code>{{month}}</code></td><td>Current month name</td><td>April</td></tr>
+        <tr><td><code>{{year}}</code></td><td>Current year</td><td>2026</td></tr>
         <tr><td><code>{{clipboard}}</code></td><td>Clipboard contents</td><td>(whatever was copied)</td></tr>
         <tr><td><code>{{cursor}}</code></td><td>Final cursor position</td><td>(cursor lands here)</td></tr>
+        <tr><td><code>{{domain}}</code></td><td>Current website domain</td><td>example.com</td></tr>
+        <tr><td><code>{{url}}</code></td><td>Current page URL</td><td>https://example.com/page</td></tr>
+        <tr><td><code>{{title}}</code></td><td>Current page title</td><td>Page Title</td></tr>
+        <tr><td><code>{{selection}}</code></td><td>Selected text on page</td><td>(highlighted text)</td></tr>
+      </table>
+
+      <h3>Custom Date/Time Formats</h3>
+      <p>Format dates and times using format strings:</p>
+      <table class="variable-table">
+        <tr><th>Variable</th><th>Output</th></tr>
+        <tr><td><code>{{date:YYYY-MM-DD}}</code></td><td>2026-04-09</td></tr>
+        <tr><td><code>{{date:MM/DD/YYYY}}</code></td><td>04/09/2026</td></tr>
+        <tr><td><code>{{time:HH:mm}}</code></td><td>14:30</td></tr>
+        <tr><td><code>{{time:h:mm A}}</code></td><td>2:30 PM</td></tr>
+        <tr><td><code>{{datetime:YYYY-MM-DD HH:mm}}</code></td><td>2026-04-09 14:30</td></tr>
       </table>
 
       <h3>Relative Dates</h3>
@@ -399,12 +434,38 @@ Best regards</pre>
       </table>
 
       <h2 id="shortcuts">Keyboard Shortcuts</h2>
+      <h3>Quick Search Overlay</h3>
       <table class="shortcut-table">
         <tr><th>Shortcut</th><th>Action</th></tr>
         <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></td><td>Open quick search overlay</td></tr>
         <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Navigate macro list</td></tr>
         <tr><td><kbd>Enter</kbd> or <kbd>Tab</kbd></td><td>Select and insert macro</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Close overlay or cancel</td></tr>
+      </table>
+
+      <h3>Dashboard Navigation</h3>
+      <p>Use Vim-style keyboard shortcuts for fast navigation in the dashboard:</p>
+      <table class="shortcut-table">
+        <tr><th>Shortcut</th><th>Action</th></tr>
+        <tr><td><kbd>j</kbd></td><td>Move selection down</td></tr>
+        <tr><td><kbd>k</kbd></td><td>Move selection up</td></tr>
+        <tr><td><kbd>g</kbd></td><td>Jump to first macro</td></tr>
+        <tr><td><kbd>G</kbd> (Shift+g)</td><td>Jump to last macro</td></tr>
+        <tr><td><kbd>e</kbd></td><td>Edit selected macro</td></tr>
+        <tr><td><kbd>d</kbd></td><td>Delete selected macro (with confirmation)</td></tr>
+        <tr><td><kbd>Space</kbd></td><td>Toggle macro enabled/disabled</td></tr>
+        <tr><td><kbd>/</kbd></td><td>Focus search input</td></tr>
+        <tr><td><kbd>n</kbd></td><td>Create new macro</td></tr>
+        <tr><td><kbd>?</kbd></td><td>Show keyboard shortcuts help</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Clear selection or close modal</td></tr>
+      </table>
+
+      <h3>Macro Editor</h3>
+      <table class="shortcut-table">
+        <tr><th>Shortcut</th><th>Action</th></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo last change</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Redo last change</td></tr>
+        <tr><td><kbd>Tab</kbd> (after expansion)</td><td>Jump to next cursor position</td></tr>
       </table>
       <div class="info-box">
         <strong>Customize shortcuts:</strong> Open the dashboard and go to Settings to change the default keyboard shortcut.
@@ -435,6 +496,69 @@ Best regards</pre>
         <li>Drag macros to folders or assign when editing</li>
       </ol>
 
+      <h2 id="tags">Tags</h2>
+      <p>Tags provide another way to organize and filter macros:</p>
+      <ol>
+        <li>Open a macro for editing</li>
+        <li>Add tags in the Tags field (comma-separated)</li>
+        <li>Click the tag filter dropdown in the toolbar to filter by tag</li>
+      </ol>
+      <p><strong>Examples:</strong> "email", "code", "urgent", "template", "personal"</p>
+      <div class="info-box">
+        <strong>Tip:</strong> Use tags for cross-cutting categories that don't fit neatly into folders, like "high-priority" or "needs-review".
+      </div>
+
+      <h2 id="templates">Snippet Templates</h2>
+      <p>SnapText includes pre-built template packs to get you started quickly:</p>
+      <ul>
+        <li><strong>Email Essentials</strong> - Professional email responses (follow-up, thank you, introduction)</li>
+        <li><strong>Developer Toolkit</strong> - Code snippets and templates (console.log, function, try-catch)</li>
+        <li><strong>Support Responses</strong> - Customer support templates (acknowledgment, resolution)</li>
+        <li><strong>Meeting Templates</strong> - Agendas and follow-up emails</li>
+        <li><strong>Fun & Casual</strong> - Emojis and casual responses (shrug, lenny)</li>
+        <li><strong>Sales Outreach</strong> - Sales and prospecting templates</li>
+      </ul>
+      <p>Access templates from the <strong>Templates</strong> tab in Share & Explore.</p>
+
+      <h2 id="multi-cursor">Multi-Cursor Support</h2>
+      <p>Place multiple cursor positions in your macros. After expansion, press <kbd>Tab</kbd> to jump between positions.</p>
+      <pre>Dear {{cursor:1}},
+
+Thank you for your {{cursor:2}}.
+
+Best regards,
+{{cursor:3}}</pre>
+      <p>When this macro expands, press <kbd>Tab</kbd> to jump from position 1 to 2 to 3.</p>
+      <table class="variable-table">
+        <tr><th>Variable</th><th>Description</th></tr>
+        <tr><td><code>{{cursor}}</code></td><td>Single cursor (legacy syntax)</td></tr>
+        <tr><td><code>{{cursor:1}}</code></td><td>First cursor position</td></tr>
+        <tr><td><code>{{cursor:2}}</code></td><td>Second cursor position</td></tr>
+        <tr><td><code>{{cursor:N}}</code></td><td>Nth cursor position</td></tr>
+      </table>
+
+      <h2 id="chaining">Snippet Chaining</h2>
+      <p>Link macros together so that expanding one automatically triggers another:</p>
+      <ol>
+        <li>Edit a macro in the dashboard</li>
+        <li>Find the <strong>"Chain to"</strong> dropdown</li>
+        <li>Select another macro to trigger after this one expands</li>
+      </ol>
+      <p><strong>Example:</strong> Create a greeting macro that chains to a signature macro for complete email templates.</p>
+      <div class="info-box">
+        <strong>Note:</strong> Chains have a maximum depth of 5 to prevent infinite loops.
+      </div>
+
+      <h2 id="analytics">Usage Analytics</h2>
+      <p>Track your macro usage with the built-in analytics dashboard:</p>
+      <ul>
+        <li><strong>Usage Chart</strong> - See expansions over time (7-day view)</li>
+        <li><strong>Top Macros</strong> - Discover your most-used snippets</li>
+        <li><strong>Activity Heatmap</strong> - See which days and hours you use macros most</li>
+        <li><strong>Total Stats</strong> - Track total expansions and characters saved</li>
+      </ul>
+      <p>Access Analytics from the sidebar in the dashboard.</p>
+
       <h2 id="cloud-setup">Setting Up Cloud Sync</h2>
       <p>Cloud sync backs up your macros and syncs them across devices:</p>
       <ol>
@@ -447,16 +571,6 @@ Best regards</pre>
         <strong>Privacy:</strong> Your macros are stored securely in Firebase. Only you can access your data.
       </div>
 
-      <h2 id="sharing">Sharing Macros</h2>
-      <p>Share macro packs with others:</p>
-      <ol>
-        <li>Select macros you want to share</li>
-        <li>Click <strong>"Share"</strong></li>
-        <li>Choose visibility (public or private link)</li>
-        <li>Copy the 8-character share code</li>
-      </ol>
-      <p>Others can import your pack by entering the share code in the Explore tab.</p>
-
       <h2 id="import-export">Import & Export</h2>
       <p>Export your macros for backup or transfer:</p>
       <ul>
@@ -464,6 +578,32 @@ Best regards</pre>
         <li><strong>CSV export:</strong> Simple format for spreadsheet editing</li>
       </ul>
       <p>Import from the Dashboard by clicking the import button and selecting your file.</p>
+
+      <h2 id="import-tools">Import from Other Tools</h2>
+      <p>SnapText can import macros from other text expansion tools:</p>
+
+      <h3>TextExpander Import</h3>
+      <p>Import from TextExpander CSV exports:</p>
+      <ol>
+        <li>In TextExpander, export your snippets as CSV</li>
+        <li>In SnapText, go to Import and select "TextExpander CSV"</li>
+        <li>Select your exported file</li>
+        <li>Preview the imported macros and confirm</li>
+      </ol>
+      <p><strong>Mapped fields:</strong> abbreviation → trigger, snippet → body, label → folder</p>
+
+      <h3>Espanso Import</h3>
+      <p>Import from Espanso YAML configuration files:</p>
+      <ol>
+        <li>Locate your Espanso config file (usually <code>default.yml</code>)</li>
+        <li>In SnapText, go to Import and select "Espanso YAML"</li>
+        <li>Select your config file</li>
+        <li>Preview and confirm the import</li>
+      </ol>
+      <p><strong>Mapped fields:</strong> trigger → trigger, replace → body</p>
+      <div class="info-box">
+        <strong>Note:</strong> Espanso variables are automatically converted to SnapText syntax where possible.
+      </div>
 
       <h2 id="not-expanding">Troubleshooting: Macros Not Expanding</h2>
       <p>If macros aren't expanding, try these steps:</p>

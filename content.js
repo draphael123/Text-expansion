@@ -25,6 +25,8 @@
   let searchOverlay = null;
   let autoSuggestPopup = null;
   let lastExpansion = null; // for undo
+  let multiCursorPositions = []; // positions for multi-cursor Tab cycling
+  let currentCursorIndex = 0;
 
   // ── Load from storage ─────────────────────────────────────────────────
   function loadAll() {
@@ -102,6 +104,69 @@
     });
   }
 
+  // Custom format date/time
+  function formatDateTime(date, format) {
+    const pad = (n) => n.toString().padStart(2, '0');
+    const tokens = {
+      'YYYY': date.getFullYear(),
+      'YY': date.getFullYear().toString().slice(-2),
+      'MM': pad(date.getMonth() + 1),
+      'M': date.getMonth() + 1,
+      'DD': pad(date.getDate()),
+      'D': date.getDate(),
+      'HH': pad(date.getHours()),
+      'H': date.getHours(),
+      'hh': pad(date.getHours() % 12 || 12),
+      'h': date.getHours() % 12 || 12,
+      'mm': pad(date.getMinutes()),
+      'm': date.getMinutes(),
+      'ss': pad(date.getSeconds()),
+      's': date.getSeconds(),
+      'A': date.getHours() >= 12 ? 'PM' : 'AM',
+      'a': date.getHours() >= 12 ? 'pm' : 'am',
+      'dddd': date.toLocaleDateString('en-US', { weekday: 'long' }),
+      'ddd': date.toLocaleDateString('en-US', { weekday: 'short' }),
+      'MMMM': date.toLocaleDateString('en-US', { month: 'long' }),
+      'MMM': date.toLocaleDateString('en-US', { month: 'short' })
+    };
+
+    // Sort by length descending to replace longer tokens first
+    const sortedTokens = Object.keys(tokens).sort((a, b) => b.length - a.length);
+    let result = format;
+    for (const token of sortedTokens) {
+      result = result.replace(new RegExp(token, 'g'), tokens[token]);
+    }
+    return result;
+  }
+
+  function getWeekday() {
+    return new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  }
+
+  function getMonthName() {
+    return new Date().toLocaleDateString('en-US', { month: 'long' });
+  }
+
+  function getYear() {
+    return new Date().getFullYear().toString();
+  }
+
+  function getDomain() {
+    return window.location.hostname;
+  }
+
+  function getUrl() {
+    return window.location.href;
+  }
+
+  function getTitle() {
+    return document.title;
+  }
+
+  function getSelection() {
+    return window.getSelection().toString() || '';
+  }
+
   async function getClipboard() {
     try { return await navigator.clipboard.readText(); }
     catch { return '[clipboard unavailable]'; }
@@ -159,6 +224,18 @@
     // Step 3: simple variables
     result = result.replace(/\{\{date\}\}/gi, getFormattedDate());
     result = result.replace(/\{\{time\}\}/gi, getFormattedTime());
+    result = result.replace(/\{\{weekday\}\}/gi, getWeekday());
+    result = result.replace(/\{\{month\}\}/gi, getMonthName());
+    result = result.replace(/\{\{year\}\}/gi, getYear());
+    result = result.replace(/\{\{domain\}\}/gi, getDomain());
+    result = result.replace(/\{\{url\}\}/gi, getUrl());
+    result = result.replace(/\{\{title\}\}/gi, getTitle());
+    result = result.replace(/\{\{selection\}\}/gi, getSelection());
+
+    // Step 3b: custom format date/time {{date:FORMAT}} {{time:FORMAT}} {{datetime:FORMAT}}
+    result = result.replace(/\{\{date:([^}]+)\}\}/gi, (_, format) => formatDateTime(new Date(), format));
+    result = result.replace(/\{\{time:([^}]+)\}\}/gi, (_, format) => formatDateTime(new Date(), format));
+    result = result.replace(/\{\{datetime:([^}]+)\}\}/gi, (_, format) => formatDateTime(new Date(), format));
 
     // Step 4: relative dates {{date+N}} or {{date-N}}
     result = result.replace(/\{\{date([+-])(\d+)\}\}/gi, (_, op, days) => {
@@ -218,15 +295,40 @@
       }
     }
 
-    // Step 5: cursor positioning
-    let cursorOffset = -1;
-    const cursorMatch = result.indexOf('{{cursor}}');
-    if (cursorMatch !== -1) {
-      cursorOffset = cursorMatch;
-      result = result.replace(/\{\{cursor\}\}/i, '');
+    // Step 5: multi-cursor positioning
+    // Supports {{cursor}}, {{cursor:1}}, {{cursor:2}}, etc.
+    let cursorPositions = [];
+    const cursorRegex = /\{\{cursor(?::(\d+))?\}\}/gi;
+    let cursorMatch;
+
+    // First pass: collect all cursor positions with their indices
+    const tempResult = result;
+    while ((cursorMatch = cursorRegex.exec(tempResult)) !== null) {
+      cursorPositions.push({
+        position: cursorMatch.index,
+        index: cursorMatch[1] ? parseInt(cursorMatch[1], 10) : 0,
+        length: cursorMatch[0].length
+      });
     }
 
-    return { text: result, cursorOffset };
+    // Sort by index (numbered cursors come first in order, unnumbered last)
+    cursorPositions.sort((a, b) => a.index - b.index);
+
+    // Second pass: remove cursor markers and adjust positions
+    let removed = 0;
+    const adjustedPositions = [];
+    for (const cursor of cursorPositions) {
+      adjustedPositions.push(cursor.position - removed);
+      removed += cursor.length;
+    }
+
+    // Remove all cursor markers
+    result = result.replace(/\{\{cursor(?::\d+)?\}\}/gi, '');
+
+    // For backward compatibility, use first cursor as primary
+    const cursorOffset = adjustedPositions.length > 0 ? adjustedPositions[0] : -1;
+
+    return { text: result, cursorOffset, cursorPositions: adjustedPositions };
   }
 
   function escapeRegex(str) {
@@ -556,7 +658,7 @@
   }
 
   // ── Expansion logic ───────────────────────────────────────────────────
-  async function tryExpand(el) {
+  async function tryExpand(el, chainDepth = 0) {
     if (isSiteBlocked()) return false;
 
     const text = getTextContent(el);
@@ -595,7 +697,7 @@
 
     if (!macro) return false;
 
-    const { text: expanded, cursorOffset } = await processVariables(macro.body);
+    const { text: expanded, cursorOffset, cursorPositions } = await processVariables(macro.body);
 
     const before = text.substring(0, triggerStart);
     const after = text.substring(caret);
@@ -617,6 +719,17 @@
       expandedCaret: newCaret
     };
 
+    // Set up multi-cursor positions (adjusted for triggerStart offset)
+    if (cursorPositions && cursorPositions.length > 1) {
+      multiCursorPositions = cursorPositions.map(pos => triggerStart + pos);
+      currentCursorIndex = 0;
+      // Add Tab key listener for cycling
+      setupMultiCursorTabCycling(el);
+    } else {
+      multiCursorPositions = [];
+      currentCursorIndex = 0;
+    }
+
     // Determine if we should use rich text
     const useRichText = el.isContentEditable;
     const htmlConverter = macro.richText ? markdownToHtml : textToHtml;
@@ -624,7 +737,161 @@
 
     insertTextUndoable(el, newText, newCaret, useRichText, richHtml);
     trackUsage(macro);
+
+    // Handle chaining - execute next macro after a short delay
+    if (macro.chainTo && chainDepth < 5) {
+      setTimeout(() => {
+        executeChainedMacro(el, macro.chainTo, chainDepth + 1);
+      }, 100);
+    }
+
     return true;
+  }
+
+  // ── Chained Macro Execution ─────────────────────────────────────────────
+  async function executeChainedMacro(el, triggerName, chainDepth) {
+    const chainedMacro = macros.find(
+      m => m.trigger.toLowerCase() === triggerName.toLowerCase() && m.enabled !== false
+    );
+
+    if (!chainedMacro) return;
+
+    const { text: expanded, cursorOffset, cursorPositions } = await processVariables(chainedMacro.body);
+
+    const currentText = getTextContent(el);
+    const currentCaret = getCaretPosition(el);
+
+    // Insert at current cursor position
+    const before = currentText.substring(0, currentCaret);
+    const after = currentText.substring(currentCaret);
+    const newText = before + expanded + after;
+
+    let newCaret;
+    if (cursorOffset >= 0) {
+      newCaret = currentCaret + cursorOffset;
+    } else {
+      newCaret = currentCaret + expanded.length;
+    }
+
+    // Set up multi-cursor positions if present
+    if (cursorPositions && cursorPositions.length > 1) {
+      multiCursorPositions = cursorPositions.map(pos => currentCaret + pos);
+      currentCursorIndex = 0;
+      setupMultiCursorTabCycling(el);
+    }
+
+    // Insert the chained content
+    const useRichText = el.isContentEditable;
+    const htmlConverter = chainedMacro.richText ? markdownToHtml : textToHtml;
+    const richHtml = useRichText ? (before ? textToHtml(before) : '') + htmlConverter(expanded) + (after ? textToHtml(after) : '') : null;
+
+    insertTextUndoable(el, newText, newCaret, useRichText, richHtml);
+    trackUsage(chainedMacro);
+
+    // Continue chain if this macro also has a chainTo
+    if (chainedMacro.chainTo && chainDepth < 5) {
+      setTimeout(() => {
+        executeChainedMacro(el, chainedMacro.chainTo, chainDepth + 1);
+      }, 100);
+    }
+  }
+
+  // ── Multi-cursor Tab cycling ────────────────────────────────────────────
+  let multiCursorHandler = null;
+
+  function setupMultiCursorTabCycling(el) {
+    // Remove any existing handler
+    if (multiCursorHandler) {
+      document.removeEventListener('keydown', multiCursorHandler, true);
+    }
+
+    multiCursorHandler = function(e) {
+      // Only handle Tab when we have multiple cursor positions
+      if (e.key !== 'Tab' || multiCursorPositions.length <= 1) return;
+
+      // Check if we're still in the same element
+      if (document.activeElement !== el && !el.contains(document.activeElement)) {
+        clearMultiCursor();
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Move to next cursor position
+      if (e.shiftKey) {
+        // Shift+Tab goes backward
+        currentCursorIndex = (currentCursorIndex - 1 + multiCursorPositions.length) % multiCursorPositions.length;
+      } else {
+        // Tab goes forward
+        currentCursorIndex = (currentCursorIndex + 1) % multiCursorPositions.length;
+      }
+
+      const newPos = multiCursorPositions[currentCursorIndex];
+      setCaretPosition(el, newPos);
+
+      // If we've cycled back to the start, clear after this
+      if (currentCursorIndex === 0 && !e.shiftKey) {
+        // User has cycled through all cursors
+        clearMultiCursor();
+      }
+    };
+
+    document.addEventListener('keydown', multiCursorHandler, true);
+
+    // Also clear on click elsewhere or Escape
+    const clearHandler = function(e) {
+      if (e.key === 'Escape' || e.type === 'mousedown') {
+        clearMultiCursor();
+        document.removeEventListener('keydown', clearHandler, true);
+        document.removeEventListener('mousedown', clearHandler, true);
+      }
+    };
+    document.addEventListener('keydown', clearHandler, true);
+    document.addEventListener('mousedown', clearHandler, true);
+  }
+
+  function clearMultiCursor() {
+    multiCursorPositions = [];
+    currentCursorIndex = 0;
+    if (multiCursorHandler) {
+      document.removeEventListener('keydown', multiCursorHandler, true);
+      multiCursorHandler = null;
+    }
+  }
+
+  function setCaretPosition(el, position) {
+    if (el.isContentEditable) {
+      const range = document.createRange();
+      const sel = window.getSelection();
+
+      // Walk through text nodes to find the right position
+      let currentPos = 0;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+      let node = walker.nextNode();
+
+      while (node) {
+        const nodeLength = node.textContent.length;
+        if (currentPos + nodeLength >= position) {
+          range.setStart(node, position - currentPos);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          return;
+        }
+        currentPos += nodeLength;
+        node = walker.nextNode();
+      }
+
+      // If we couldn't find the position, place at end
+      range.selectNodeContents(el);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      el.selectionStart = el.selectionEnd = position;
+      el.focus();
+    }
   }
 
   // ── Quick Search Overlay (Ctrl+Shift+Space) ───────────────────────────

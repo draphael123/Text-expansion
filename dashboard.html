@@ -7,1042 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="tokens.css" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --blue: #2563EB;
-      --blue-light: #3B82F6;
-      --blue-dark: #1D4ED8;
-      --blue-bg: #DBEAFE;
-      --blue-50: #BFDBFE;
-      --bg: #F8FAFC;
-      --bg-alt: #F1F5F9;
-      --white: #FFFFFF;
-      --border: #CBD5E1;
-      --text: #0F172A;
-      --text-muted: #475569;
-      --text-light: #64748B;
-      --danger: #EF4444;
-      --danger-bg: #FEF2F2;
-      --success: #10B981;
-      --success-bg: #ECFDF5;
-      --warn: #F59E0B;
-      --warn-bg: #FFFBEB;
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
-
-    .offline-banner {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-      background: #FEF3C7;
-      color: #92400E;
-      padding: 10px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      font-size: 13px;
-      font-weight: 500;
-      border-bottom: 1px solid #FDE68A;
-    }
-    .offline-banner svg { color: #D97706; }
-
-    .app { display: flex; min-height: 100vh; }
-
-    .sidebar {
-      width: 240px;
-      background: var(--white);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-    }
-
-    .main { flex: 1; margin-left: 240px; padding: 28px 36px; }
-
-    .sidebar-logo {
-      padding: 18px 20px;
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--blue);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border-bottom: 1px solid var(--border);
-      letter-spacing: -0.3px;
-    }
-    .sidebar-logo svg { width: 24px; height: 24px; }
-
-    .sidebar-section {
-      padding: 16px 16px 6px;
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--text-light);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .sidebar-section .add-folder-btn {
-      background: none; border: none; cursor: pointer;
-      color: var(--text-light); font-size: 16px; line-height: 1;
-      padding: 0 2px; border-radius: 3px;
-    }
-    .sidebar-section .add-folder-btn:hover { color: var(--blue); }
-
-    .sidebar-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 9px 16px;
-      font-size: 13px;
-      cursor: pointer;
-      color: var(--text-muted);
-      transition: all 0.12s;
-      border-radius: 6px;
-      margin: 1px 8px;
-      font-weight: 500;
-    }
-    .sidebar-item:hover { background: var(--blue-bg); color: var(--blue); }
-    .sidebar-item.active { background: var(--blue-bg); color: var(--blue); font-weight: 600; }
-
-    .sidebar-item .count {
-      margin-left: auto;
-      font-size: 11px;
-      background: var(--bg);
-      color: var(--text-light);
-      padding: 1px 7px;
-      border-radius: 10px;
-      font-weight: 600;
-    }
-    .sidebar-item.active .count { background: var(--blue); color: #fff; }
-
-    .sidebar-item .folder-actions {
-      margin-left: auto;
-      display: none;
-      gap: 2px;
-    }
-    .sidebar-item:hover .folder-actions { display: flex; }
-    .sidebar-item:hover .count { display: none; }
-    .folder-action-btn {
-      background: none; border: none; cursor: pointer;
-      font-size: 11px; color: var(--text-light); padding: 1px 3px;
-      border-radius: 3px;
-    }
-    .folder-action-btn:hover { color: var(--blue); background: var(--blue-50); }
-    .folder-action-btn.danger:hover { color: var(--danger); background: var(--danger-bg); }
-
-    .sidebar-footer {
-      margin-top: auto;
-      padding: 16px;
-      border-top: 1px solid var(--border);
-    }
-    .user-info { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; }
-    .sidebar-footer .btn { width: 100%; margin-bottom: 6px; justify-content: center; }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
-    .topbar h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
-
-    /* ── Conflict banner ─────────────────────────────── */
-    .conflict-banner {
-      display: none;
-      background: var(--warn-bg);
-      border: 1px solid #FDE68A;
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 16px;
-      font-size: 13px;
-      color: #92400E;
-    }
-    .conflict-banner.visible { display: flex; align-items: center; gap: 12px; }
-    .conflict-banner .cb-icon { font-size: 20px; }
-    .conflict-banner .cb-text { flex: 1; }
-    .conflict-banner .cb-text strong { font-weight: 700; }
-
-    /* ── Stats cards ─────────────────────────────────── */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 24px;
-    }
-    .stat-card {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 18px 20px;
-    }
-    .stat-card .label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-light);
-      margin-bottom: 4px;
-    }
-    .stat-card .value { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -1px; }
-    .stat-card .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-    /* ── Buttons ─────────────────────────────────────── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      background: var(--white);
-      color: var(--text);
-      transition: all 0.12s;
-      font-family: inherit;
-    }
-    .btn:hover { border-color: var(--blue); color: var(--blue); }
-    .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
-    .btn-primary:hover { background: var(--blue-dark); }
-    .btn-danger { color: var(--danger); border-color: transparent; background: transparent; }
-    .btn-danger:hover { background: var(--danger-bg); }
-    .btn-sm { padding: 5px 10px; font-size: 12px; }
-    .btn-warn { background: var(--warn); color: #fff; border-color: var(--warn); }
-    .btn-success { background: var(--success); color: #fff; border-color: var(--success); }
-
-    .btn-loading {
-      position: relative;
-      color: transparent !important;
-      pointer-events: none;
-    }
-    .btn-loading::after {
-      content: '';
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      top: 50%;
-      left: 50%;
-      margin-left: -7px;
-      margin-top: -7px;
-      border: 2px solid currentColor;
-      border-radius: 50%;
-      border-top-color: transparent;
-      animation: spin 0.6s linear infinite;
-    }
-    .btn-primary.btn-loading::after {
-      border-color: rgba(255, 255, 255, 0.3);
-      border-top-color: #fff;
-    }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    .search-row { display: flex; gap: 10px; margin-bottom: 16px; }
-    .search-input {
-      flex: 1; padding: 9px 14px;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      font-size: 13px;
-      outline: none;
-      background: var(--white);
-      font-family: inherit;
-      transition: border-color 0.2s;
-    }
-    .search-input:focus { border-color: var(--blue); }
-
-    .filter-chips {
-      display: flex;
-      gap: 6px;
-    }
-    .filter-chip {
-      padding: 6px 12px;
-      font-size: 12px;
-      font-weight: 500;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      background: var(--white);
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.12s;
-      font-family: inherit;
-    }
-    .filter-chip:hover { border-color: var(--blue); color: var(--blue); }
-    .filter-chip.active {
-      background: var(--blue);
-      border-color: var(--blue);
-      color: #fff;
-    }
-    .search-result-count {
-      font-size: 12px;
-      color: var(--text-light);
-      margin-bottom: 12px;
-    }
-    .search-result-count .highlight {
-      color: var(--blue);
-      font-weight: 600;
-    }
-
-    /* ── Macro table ─────────────────────────────────── */
-    .macro-table {
-      width: 100%; border-collapse: collapse;
-      background: var(--white);
-      border-radius: 10px; overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    .macro-table th {
-      text-align: left; padding: 10px 16px;
-      font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      color: var(--text-light);
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-    }
-    .macro-table td {
-      padding: 12px 16px; font-size: 13px;
-      border-bottom: 1px solid #F1F5F9;
-      vertical-align: middle;
-    }
-    .macro-table tr:last-child td { border-bottom: none; }
-    .macro-table tr:hover td { background: #FAFCFF; }
-
-    /* Drag and drop styles */
-    .drag-handle:hover { color: var(--blue) !important; }
-    .macro-table tr[draggable="true"]:active { cursor: grabbing; }
-    .macro-table tr.drop-above { box-shadow: inset 0 2px 0 var(--blue); }
-    .macro-table tr.drop-below { box-shadow: inset 0 -2px 0 var(--blue); }
-    .sidebar-item.drop-target {
-      background: var(--blue-bg) !important;
-      outline: 2px dashed var(--blue);
-      outline-offset: -2px;
-    }
-
-    /* Bulk action bar */
-    .bulk-action-bar {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      background: var(--blue);
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 10px;
-      margin-bottom: 12px;
-      animation: slideUp 0.2s ease-out;
-    }
-    .bulk-action-bar #bulk-count {
-      font-weight: 600;
-      font-size: 13px;
-    }
-    .bulk-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-left: auto;
-    }
-    .bulk-select {
-      padding: 5px 10px;
-      border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.3);
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .bulk-select option { color: var(--text); background: var(--white); }
-    .bulk-action-bar .btn {
-      background: rgba(255,255,255,0.15);
-      border-color: rgba(255,255,255,0.3);
-      color: #fff;
-    }
-    .bulk-action-bar .btn:hover {
-      background: rgba(255,255,255,0.25);
-      border-color: rgba(255,255,255,0.5);
-    }
-    .bulk-action-bar .btn-danger {
-      background: #DC2626;
-      border-color: #DC2626;
-    }
-    .bulk-action-bar .btn-danger:hover {
-      background: #B91C1C;
-    }
-    .macro-checkbox {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-    }
-    #select-all-macros {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Variable insertion toolbar */
-    .variable-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 8px;
-      padding: 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 7px 7px 0 0;
-      border-bottom: none;
-    }
-    .var-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      font-size: 12px;
-      font-weight: 500;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      background: var(--white);
-      color: var(--text);
-      cursor: pointer;
-      transition: all 0.12s;
-      font-family: inherit;
-    }
-    .var-btn:hover { border-color: var(--blue); color: var(--blue); }
-    .var-dropdown { position: relative; }
-    .var-dropdown-menu {
-      display: none;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      z-index: 100;
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(15,23,42,0.12);
-      min-width: 180px;
-      padding: 4px;
-      margin-top: 4px;
-    }
-    .var-dropdown.open .var-dropdown-menu { display: block; }
-    .var-dropdown-menu button {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 8px 12px;
-      font-size: 12px;
-      text-align: left;
-      border: none;
-      background: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-family: inherit;
-      color: var(--text);
-    }
-    .var-dropdown-menu button:hover { background: var(--blue-bg); color: var(--blue); }
-    #macro-body { border-top-left-radius: 0; border-top-right-radius: 0; }
-
-    .trigger-cell {
-      font-family: 'SF Mono', Monaco, Consolas, monospace;
-      color: var(--blue); font-weight: 600; font-size: 12px;
-    }
-    .body-cell {
-      color: var(--text-muted);
-      max-width: 360px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .folder-badge {
-      display: inline-block;
-      background: var(--blue-bg);
-      color: var(--blue);
-      font-size: 11px; font-weight: 600;
-      padding: 2px 8px; border-radius: 4px;
-    }
-    .use-count { font-size: 12px; color: var(--text-light); font-weight: 500; }
-    .actions-cell { display: flex; gap: 4px; }
-
-    .toggle-switch { position: relative; width: 34px; height: 18px; cursor: pointer; }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider {
-      position: absolute; inset: 0;
-      background: #CBD5E1; border-radius: 10px;
-      transition: 0.2s;
-    }
-    .toggle-slider::before {
-      content: ''; position: absolute;
-      width: 14px; height: 14px;
-      left: 2px; top: 2px;
-      background: #fff; border-radius: 50%;
-      transition: 0.2s;
-    }
-    .toggle-switch input:checked + .toggle-slider { background: var(--blue); }
-    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
-
-    /* ── Modal ───────────────────────────────────────── */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(15, 23, 42, 0.4);
-      backdrop-filter: blur(4px);
-      z-index: 1000;
-      align-items: center; justify-content: center;
-    }
-    .modal-overlay.visible { display: flex; }
-
-    .modal {
-      background: var(--white); border-radius: 14px;
-      width: 500px; max-height: 85vh;
-      overflow-y: auto;
-      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
-      animation: modal-in 0.15s ease-out;
-    }
-    @keyframes modal-in {
-      from { opacity: 0; transform: scale(0.96) translateY(-8px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    .modal-header {
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .modal-header h3 { font-size: 16px; font-weight: 700; }
-    .modal-close {
-      background: none; border: none;
-      font-size: 18px; cursor: pointer;
-      color: var(--text-muted);
-      width: 30px; height: 30px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .modal-close:hover { background: var(--bg); }
-    .modal-body { padding: 20px 24px; }
-    .form-group { margin-bottom: 14px; }
-    .form-group label {
-      display: block; font-size: 12px; font-weight: 600;
-      margin-bottom: 5px; color: var(--text);
-    }
-    .form-group input, .form-group textarea, .form-group select {
-      width: 100%; padding: 9px 12px;
-      border: 1px solid var(--border);
-      border-radius: 7px; font-size: 13px;
-      outline: none; font-family: inherit;
-      transition: border-color 0.2s;
-    }
-    .form-group input:focus, .form-group textarea:focus { border-color: var(--blue); }
-    .form-group textarea {
-      min-height: 100px; resize: vertical;
-      font-family: 'SF Mono', Monaco, Consolas, monospace;
-      font-size: 13px;
-    }
-    .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-    .form-hint code {
-      background: var(--bg); padding: 1px 5px;
-      border-radius: 3px; font-size: 11px;
-      color: var(--blue); border: 1px solid var(--border);
-    }
-    .form-error { font-size: 12px; color: var(--danger); margin-top: 4px; display: none; }
-    .form-error.visible { display: block; }
-
-    /* Help icon tooltips */
-    .help-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: var(--bg-alt);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      font-size: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      margin-left: 6px;
-      transition: all 0.15s;
-      vertical-align: middle;
-    }
-    .help-icon:hover {
-      background: var(--blue-bg);
-      color: var(--blue);
-      border-color: var(--blue-50);
-    }
-    .help-tooltip {
-      display: none;
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 12px;
-      color: var(--text-muted);
-      line-height: 1.6;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
-      margin-top: 8px;
-      max-width: 320px;
-    }
-    .help-tooltip.visible { display: block; }
-    .help-tooltip code {
-      background: var(--bg-alt);
-      padding: 1px 5px;
-      border-radius: 3px;
-      font-size: 11px;
-      color: var(--blue);
-    }
-    .help-tooltip strong { color: var(--text); font-weight: 600; }
-
-    .preview-pane {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 7px; padding: 12px 14px;
-      font-size: 13px; color: var(--text-muted);
-      min-height: 50px;
-      white-space: pre-wrap; word-wrap: break-word; margin-top: 8px;
-    }
-
-    .modal-footer {
-      padding: 14px 24px;
-      border-top: 1px solid var(--border);
-      display: flex; justify-content: flex-end; gap: 8px;
-    }
-
-    /* ── Share / Explore ────────────────────────────── */
-    .share-tabs {
-      display: flex; gap: 0; margin-bottom: 20px;
-      border-bottom: 2px solid var(--border);
-    }
-    .share-tab {
-      padding: 10px 20px; font-size: 13px; font-weight: 600;
-      cursor: pointer; color: var(--text-muted);
-      border-bottom: 2px solid transparent;
-      margin-bottom: -2px; transition: 0.15s;
-    }
-    .share-tab:hover { color: var(--text); }
-    .share-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
-
-    .share-box {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px; padding: 12px;
-      margin-top: 8px;
-    }
-    .share-code-display {
-      display: flex; align-items: center; gap: 8px;
-      background: var(--white); border: 1px solid var(--border);
-      border-radius: 6px; padding: 10px 14px;
-      font-family: 'SF Mono', Monaco, Consolas, monospace;
-      font-size: 16px; font-weight: 600; letter-spacing: 1px;
-      color: var(--blue);
-    }
-    .share-code-display .copy-btn {
-      margin-left: auto; cursor: pointer;
-      background: var(--blue-bg); border: none;
-      padding: 4px 10px; border-radius: 5px;
-      font-size: 12px; color: var(--blue); font-weight: 600;
-    }
-    .share-code-display .copy-btn:hover { background: var(--blue-50); }
-
-    /* Share result with multiple options */
-    .share-result-box {
-      background: var(--success-bg);
-      border: 1px solid #A7F3D0;
-      border-radius: 10px;
-      padding: 16px;
-    }
-    .share-result-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #065F46;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .share-link-box {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 12px;
-    }
-    .share-link-input {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 13px;
-      font-family: monospace;
-      background: var(--bg);
-      color: var(--text);
-      margin-bottom: 10px;
-    }
-    .share-actions-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .share-action-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-      background: var(--white);
-      color: var(--text);
-    }
-    .share-action-btn:hover {
-      border-color: var(--blue);
-      color: var(--blue);
-    }
-    .share-action-btn.primary {
-      background: var(--blue);
-      color: white;
-      border-color: var(--blue);
-    }
-    .share-action-btn.primary:hover {
-      background: var(--blue-dark);
-    }
-    .share-qr-container {
-      margin-top: 12px;
-      text-align: center;
-      padding: 16px;
-      background: white;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-    .share-qr-container canvas {
-      display: block;
-      margin: 0 auto 10px;
-    }
-    .share-qr-hint {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    /* Quick share button in macro row */
-    .macro-share-btn {
-      opacity: 0;
-      padding: 4px 8px;
-      font-size: 11px;
-      background: var(--blue-bg);
-      color: var(--blue);
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    .trow:hover .macro-share-btn {
-      opacity: 1;
-    }
-    .macro-share-btn:hover {
-      background: var(--blue);
-      color: white;
-    }
-
-    .explore-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 14px;
-    }
-    .explore-card {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 10px; padding: 18px;
-      transition: border-color 0.15s;
-    }
-    .explore-card:hover { border-color: var(--blue-light); }
-    .explore-card .ec-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .explore-card .ec-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
-    .explore-card .ec-meta {
-      display: flex; gap: 12px; font-size: 11px; color: var(--text-light);
-      margin-bottom: 12px;
-    }
-    .explore-card .ec-meta span { display: flex; align-items: center; gap: 4px; }
-
-    .share-code {
-      width: 100%; padding: 8px 10px;
-      font-family: 'SF Mono', Monaco, Consolas, monospace;
-      font-size: 11px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--white);
-      word-break: break-all;
-      min-height: 60px; resize: vertical;
-    }
-    .share-actions { display: flex; gap: 6px; margin-top: 8px; }
-
-    .my-shares-table {
-      width: 100%; border-collapse: collapse;
-      background: var(--white);
-      border-radius: 10px; overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    .my-shares-table th {
-      text-align: left; padding: 10px 16px;
-      font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      color: var(--text-light);
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-    }
-    .my-shares-table td {
-      padding: 10px 16px; font-size: 13px;
-      border-bottom: 1px solid #F1F5F9;
-    }
-
-    /* ── Auth ────────────────────────────────────────── */
-    .auth-card {
-      background: var(--white); border-radius: 12px;
-      border: 1px solid var(--border);
-      padding: 32px; text-align: center;
-      max-width: 380px; margin: 40px auto;
-    }
-    .auth-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-    .auth-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
-    .auth-input {
-      width: 100%; padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 7px; font-size: 13px;
-      outline: none; margin-bottom: 10px; font-family: inherit;
-    }
-    .auth-input:focus { border-color: var(--blue); }
-
-    /* ── Settings ────────────────────────────────────── */
-    .settings-section {
-      background: var(--white); border-radius: 10px;
-      border: 1px solid var(--border);
-      padding: 20px 24px; margin-bottom: 14px;
-    }
-    .settings-section h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-    .setting-row {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #F1F5F9;
-    }
-    .setting-row:last-child { border-bottom: none; }
-    .setting-label { font-size: 13px; font-weight: 500; }
-    .setting-desc { font-size: 11px; color: var(--text-muted); }
-
-    .domain-list {
-      margin-top: 8px;
-      display: flex; flex-wrap: wrap; gap: 6px;
-    }
-    .domain-tag {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: var(--bg); border: 1px solid var(--border);
-      padding: 3px 8px; border-radius: 5px;
-      font-size: 12px; color: var(--text-muted);
-    }
-    .domain-tag .remove {
-      cursor: pointer; color: var(--danger);
-      font-weight: 700; font-size: 14px;
-      margin-left: 2px;
-    }
-    .domain-add-row { display: flex; gap: 6px; margin-top: 8px; }
-    .domain-add-row input { flex: 1; }
-
-    /* ── Export dropdown ─────────────────────────────── */
-    .export-dropdown {
-      position: relative; display: inline-block;
-    }
-    .export-menu {
-      display: none;
-      position: absolute; top: 100%; right: 0;
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-      min-width: 180px; z-index: 100;
-      padding: 4px;
-      margin-top: 4px;
-    }
-    .export-menu.visible { display: block; }
-    .export-menu-item {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px; font-size: 13px;
-      cursor: pointer; border-radius: 6px;
-      color: var(--text); border: none;
-      background: none; width: 100; text-align: left;
-      font-family: inherit;
-    }
-    .export-menu-item:hover { background: var(--blue-bg); color: var(--blue); }
-    .export-menu-item .emi-icon { font-size: 15px; width: 20px; text-align: center; }
-    .export-menu-item .emi-desc { font-size: 11px; color: var(--text-light); }
-
-    .empty {
-      text-align: center; padding: 60px 20px; color: var(--text-muted);
-    }
-    .empty .icon { font-size: 40px; margin-bottom: 12px; }
-    .empty p { font-size: 14px; margin-bottom: 16px; }
-
-    /* ── Theme Toggle ───────────────────────────────────── */
-    .theme-toggle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .theme-toggle .sun-icon,
-    .theme-toggle .moon-icon {
-      flex-shrink: 0;
-    }
-    [data-theme="dark"] .theme-toggle .sun-icon { display: none; }
-    [data-theme="dark"] .theme-toggle .moon-icon { display: block !important; }
-    .theme-label { font-size: 12px; }
-
-    /* ── Dark Mode Overrides ────────────────────────────── */
-    [data-theme="dark"] .offline-banner {
-      background: #451A03;
-      color: #FDE68A;
-      border-color: #92400E;
-    }
-    [data-theme="dark"] .offline-banner svg { color: #FBBF24; }
-
-    [data-theme="dark"] .macro-table tr:hover td { background: #1E293B; }
-    [data-theme="dark"] .macro-table td { border-bottom-color: #334155; }
-
-    [data-theme="dark"] .conflict-banner {
-      background: #451A03;
-      color: #FDE68A;
-      border-color: #92400E;
-    }
-
-    [data-theme="dark"] .toggle-slider { background: #475569; }
-    [data-theme="dark"] .toggle-switch input:checked + .toggle-slider { background: var(--blue); }
-
-    [data-theme="dark"] .export-menu {
-      background: var(--white);
-      border-color: var(--border);
-    }
-
-    [data-theme="dark"] .help-tooltip {
-      background: #1E293B;
-      border-color: #334155;
-      color: #94A3B8;
-    }
-
-    /* ── Mobile Responsive ──────────────────────────────── */
-    .mobile-nav-toggle {
-      display: none;
-      position: fixed;
-      top: 16px;
-      left: 16px;
-      z-index: 1001;
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px;
-      cursor: pointer;
-      box-shadow: var(--shadow-md);
-    }
-    .mobile-nav-toggle svg { display: block; }
-
-    .mobile-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.5);
-      backdrop-filter: blur(4px);
-      z-index: 999;
-    }
-    .mobile-overlay.visible { display: block; }
-
-    @media (max-width: 768px) {
-      .mobile-nav-toggle { display: block; }
-
-      .sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        z-index: 1000;
-      }
-      .sidebar.open { transform: translateX(0); }
-
-      .main {
-        margin-left: 0;
-        padding: 70px 16px 24px;
-      }
-
-      .stats-row {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-      }
-
-      .topbar {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-      }
-      .topbar h2 { font-size: 18px; }
-
-      .search-row {
-        flex-direction: column;
-      }
-
-      .macro-table-wrapper {
-        overflow-x: auto;
-        margin: 0 -16px;
-        padding: 0 16px;
-      }
-      .macro-table {
-        min-width: 600px;
-      }
-
-      .modal {
-        width: calc(100% - 32px);
-        max-width: 500px;
-        margin: 16px;
-      }
-
-      .share-tabs {
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .share-tab {
-        flex: 1;
-        min-width: calc(50% - 4px);
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .stats-row {
-        grid-template-columns: 1fr;
-      }
-
-      .stat-card {
-        padding: 14px 16px;
-      }
-      .stat-card .value { font-size: 24px; }
-
-      .topbar-actions {
-        width: 100%;
-      }
-      .topbar-actions .btn {
-        flex: 1;
-        justify-content: center;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="styles/dashboard.css" />
 </head>
 <body>
   <!-- Mobile Navigation Toggle -->
@@ -1066,6 +31,7 @@
       </div>
       <div class="sidebar-section">Menu</div>
       <div class="sidebar-item active" data-view="macros">&#128221; All Macros <span class="count" id="count-all">0</span></div>
+      <div class="sidebar-item" data-view="analytics">&#128202; Analytics</div>
       <div class="sidebar-item" data-view="share">&#128279; Share &amp; Explore</div>
       <div class="sidebar-item" data-view="settings">&#9881; Settings</div>
       <div class="sidebar-item" data-view="account">&#128100; Account</div>
@@ -1098,7 +64,7 @@
             </button>
           </div>
         </div>
-        <button class="btn btn-sm" id="btn-import" style="margin-top:6px;">&#128229; Import</button>
+        <button class="btn btn-sm" id="btn-import" style="margin-top:6px;" title="Import from JSON, CSV, TextExpander, or Espanso">&#128229; Import</button>
       </div>
     </nav>
 
@@ -1148,6 +114,7 @@
           <div class="share-tab active" data-stab="publish">Publish</div>
           <div class="share-tab" data-stab="import">Import</div>
           <div class="share-tab" data-stab="explore">Explore</div>
+          <div class="share-tab" data-stab="templates">Templates</div>
           <div class="share-tab" data-stab="my-shares">My Shares</div>
         </div>
 
@@ -1235,9 +202,76 @@
           </div>
         </div>
 
+        <!-- Templates tab -->
+        <div id="stab-templates" style="display:none;">
+          <div class="templates-intro">
+            <p>Get started quickly with pre-built snippet packs for common use cases. Click "Install" to add them to your collection.</p>
+          </div>
+          <div class="template-grid" id="template-grid"></div>
+        </div>
+
         <!-- My Shares tab -->
         <div id="stab-my-shares" style="display:none;">
           <div id="my-shares-wrap"></div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS VIEW -->
+      <div id="view-analytics" style="display:none;">
+        <div class="topbar"><h2>Usage Analytics</h2></div>
+
+        <div class="analytics-grid">
+          <!-- Summary Cards -->
+          <div class="analytics-summary">
+            <div class="analytics-card">
+              <div class="analytics-card-label">Total Expansions</div>
+              <div class="analytics-card-value" id="analytics-total">0</div>
+            </div>
+            <div class="analytics-card">
+              <div class="analytics-card-label">Characters Saved</div>
+              <div class="analytics-card-value" id="analytics-chars">0</div>
+            </div>
+            <div class="analytics-card">
+              <div class="analytics-card-label">Time Saved</div>
+              <div class="analytics-card-value" id="analytics-time">0 min</div>
+            </div>
+            <div class="analytics-card">
+              <div class="analytics-card-label">Most Active Day</div>
+              <div class="analytics-card-value" id="analytics-best-day">—</div>
+            </div>
+          </div>
+
+          <!-- Usage Chart -->
+          <div class="analytics-section">
+            <div class="analytics-section-header">
+              <h3>Daily Usage (Last 30 Days)</h3>
+              <div class="analytics-chart-toggle">
+                <button class="chart-toggle active" data-chart="usage">Expansions</button>
+                <button class="chart-toggle" data-chart="chars">Characters</button>
+              </div>
+            </div>
+            <div class="analytics-chart">
+              <canvas id="usage-chart" width="800" height="200"></canvas>
+            </div>
+          </div>
+
+          <!-- Top Macros -->
+          <div class="analytics-section">
+            <h3>Most Used Macros</h3>
+            <div class="analytics-top-list" id="analytics-top-macros"></div>
+          </div>
+
+          <!-- Usage by Folder -->
+          <div class="analytics-section">
+            <h3>Usage by Folder</h3>
+            <div class="analytics-folder-chart" id="analytics-folders"></div>
+          </div>
+
+          <!-- Activity Heatmap -->
+          <div class="analytics-section">
+            <h3>Activity Heatmap (This Week)</h3>
+            <div class="analytics-heatmap" id="analytics-heatmap"></div>
+          </div>
         </div>
       </div>
 
@@ -1421,14 +455,27 @@
         <div class="form-group">
           <label>Expansion body <span class="help-icon" data-help="variables">?</span></label>
           <div class="help-tooltip" id="help-variables">
-            <strong>Available variables:</strong><br>
+            <strong>Date &amp; Time:</strong><br>
             <code>{{date}}</code> — Today's date<br>
             <code>{{time}}</code> — Current time<br>
+            <code>{{date:YYYY-MM-DD}}</code> — Custom format date<br>
+            <code>{{time:HH:mm}}</code> — Custom format time<br>
             <code>{{date+7}}</code> — Date 7 days from now<br>
-            <code>{{clipboard}}</code> — Paste clipboard contents<br>
-            <code>{{cursor}}</code> — Position cursor here after expansion<br>
+            <code>{{weekday}}</code> — Day name (Monday, etc.)<br>
+            <code>{{month}}</code> — Month name<br>
+            <code>{{year}}</code> — Current year<br><br>
+            <strong>Page Context:</strong><br>
+            <code>{{domain}}</code> — Current site domain<br>
+            <code>{{url}}</code> — Current page URL<br>
+            <code>{{title}}</code> — Page title<br>
+            <code>{{selection}}</code> — Selected text<br>
+            <code>{{clipboard}}</code> — Clipboard contents<br><br>
+            <strong>Interactive:</strong><br>
             <code>{{input:Label}}</code> — Prompt for input<br>
             <code>{{select:a,b,c}}</code> — Show dropdown choices<br>
+            <code>{{cursor}}</code> — Position cursor here<br>
+            <code>{{cursor:1}}, {{cursor:2}}</code> — Multi-cursor (Tab to cycle)<br><br>
+            <strong>Other:</strong><br>
             <code>{{random:a,b}}</code> — Pick random option<br>
             <code>{{calc:1+1}}</code> — Calculate math expression<br>
             <code>{{macro:trigger}}</code> — Nest another macro
@@ -1445,12 +492,21 @@
                 <button type="button" data-var="{{select:Option1,Option2}}" title="Dropdown selection">&#9776; Select dropdown</button>
                 <button type="button" data-var="{{random:a,b,c}}" title="Random choice">&#127922; Random</button>
                 <button type="button" data-var="{{date+7}}" title="Date offset">&#128197; Date +7 days</button>
+                <button type="button" data-var="{{date:YYYY-MM-DD}}" title="Custom date format">&#128197; Custom date</button>
+                <button type="button" data-var="{{weekday}}" title="Day of week">&#128197; Weekday</button>
                 <button type="button" data-var="{{calc:1+1}}" title="Math calculation">&#128290; Calculate</button>
+                <button type="button" data-var="{{domain}}" title="Current domain">&#127760; Domain</button>
+                <button type="button" data-var="{{url}}" title="Current page URL">&#128279; URL</button>
+                <button type="button" data-var="{{title}}" title="Page title">&#128196; Page title</button>
+                <button type="button" data-var="{{selection}}" title="Selected text">&#9998; Selection</button>
                 <button type="button" data-var="{{uppercase}}{{/uppercase}}" title="Uppercase text">&#65;&#65; Uppercase</button>
                 <button type="button" data-var="{{lowercase}}{{/lowercase}}" title="Lowercase text">&#97;&#97; Lowercase</button>
                 <button type="button" data-var="{{macro:trigger}}" title="Nest another macro">&#128257; Nested macro</button>
               </div>
             </div>
+            <div class="var-spacer"></div>
+            <button type="button" class="var-btn var-undo" id="btn-undo" title="Undo (Ctrl+Z)" disabled>&#8630; Undo</button>
+            <button type="button" class="var-btn var-redo" id="btn-redo" title="Redo (Ctrl+Y)" disabled>&#8631; Redo</button>
           </div>
           <textarea id="macro-body" placeholder="Type your expansion text. Use {{date}}, {{clipboard}}, etc. for dynamic content"></textarea>
           <div class="form-hint">
@@ -1465,6 +521,23 @@
           <label>Folder</label>
           <input type="text" id="macro-folder" placeholder="e.g. Email, Work, Personal" list="folder-datalist" />
           <datalist id="folder-datalist"></datalist>
+        </div>
+        <div class="form-group">
+          <label>Tags <span class="help-icon" data-help="tags">?</span></label>
+          <div class="help-tooltip" id="help-tags">Add tags to organize and filter your macros. Separate multiple tags with commas. Examples: <code>work</code>, <code>email</code>, <code>template</code></div>
+          <div class="tags-input-container" id="tags-input-container">
+            <div class="tags-list" id="tags-list"></div>
+            <input type="text" id="macro-tags-input" placeholder="Add tags (comma separated)" />
+          </div>
+          <div class="form-hint">Press Enter or comma to add a tag</div>
+        </div>
+        <div class="form-group">
+          <label>Chain to <span class="help-icon" data-help="chain">?</span></label>
+          <div class="help-tooltip" id="help-chain">After this macro expands, automatically trigger another macro. Use this to create multi-step workflows or form sequences.</div>
+          <select id="macro-chain">
+            <option value="">None</option>
+          </select>
+          <div class="form-hint">Optionally run another macro after this one</div>
         </div>
         <div class="form-group" style="display:flex;align-items:center;gap:8px;">
           <input type="checkbox" id="macro-abbreviation" style="width:16px;height:16px;cursor:pointer;" />
@@ -1504,7 +577,7 @@
     </div>
   </div>
 
-  <input type="file" id="file-import" accept=".json,.csv" style="display:none;" />
+  <input type="file" id="file-import" accept=".json,.csv,.yaml,.yml" style="display:none;" />
 
   <!-- Team create/join modal -->
   <div class="modal-overlay" id="modal-team">
@@ -1621,6 +694,37 @@
         <button class="btn" id="team-macro-modal-cancel">Cancel</button>
         <button class="btn btn-danger" id="team-macro-modal-delete" style="display:none;">Delete</button>
         <button class="btn btn-primary" id="team-macro-modal-save">Save Macro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Help Modal -->
+  <div class="modal-overlay" id="modal-keyboard-help">
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <div class="modal-title">Keyboard Shortcuts</div>
+        <button class="modal-close" id="keyboard-help-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="shortcut-grid">
+          <div class="shortcut-section">
+            <h4>Navigation</h4>
+            <div class="shortcut-row"><kbd>j</kbd> or <kbd>&darr;</kbd><span>Move down</span></div>
+            <div class="shortcut-row"><kbd>k</kbd> or <kbd>&uarr;</kbd><span>Move up</span></div>
+            <div class="shortcut-row"><kbd>g</kbd><span>Go to first</span></div>
+            <div class="shortcut-row"><kbd>G</kbd><span>Go to last</span></div>
+            <div class="shortcut-row"><kbd>/</kbd><span>Focus search</span></div>
+            <div class="shortcut-row"><kbd>Esc</kbd><span>Clear selection / Close modal</span></div>
+          </div>
+          <div class="shortcut-section">
+            <h4>Actions</h4>
+            <div class="shortcut-row"><kbd>n</kbd><span>New macro</span></div>
+            <div class="shortcut-row"><kbd>e</kbd> or <kbd>Enter</kbd><span>Edit selected</span></div>
+            <div class="shortcut-row"><kbd>d</kbd><span>Delete selected</span></div>
+            <div class="shortcut-row"><kbd>Space</kbd><span>Toggle enabled</span></div>
+            <div class="shortcut-row"><kbd>?</kbd><span>Show this help</span></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

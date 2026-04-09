@@ -1,0 +1,20 @@
+{
+  "name": "snaptext",
+  "version": "2.0.5",
+  "description": "Text expansion Chrome extension",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch",
+    "dev": "npm run watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  },
+  "keywords": [
+    "chrome-extension",
+    "text-expansion",
+    "productivity"
+  ],
+  "license": "MIT"
+}

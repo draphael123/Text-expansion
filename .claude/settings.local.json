@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check:*)",
+      "Bash(ls:*)",
+      "Bash(powershell:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:draphael123.github.io)",
+      "Bash(dir \"C:\\\\Users\\\\danie\\\\OneDrive\\\\Desktop\\\\Cursor Projects\\\\Text-Expansion-Buddy\\\\downloads\" /T:W)",
+      "Bash(dir:*)",
+      "WebSearch",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
