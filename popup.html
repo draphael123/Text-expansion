@@ -28,8 +28,12 @@
   </div>
 
   <div class="quick-edit-form" id="quick-edit-form">
+    <div class="quick-edit-title" id="quick-edit-title">New Macro</div>
     <input type="text" id="quick-edit-trigger" placeholder="Trigger (without ;)" />
     <textarea id="quick-edit-body" placeholder="Expansion text..."></textarea>
+    <select id="quick-edit-folder" class="folder-select">
+      <option value="General">General</option>
+    </select>
     <div class="quick-edit-actions">
       <button type="button" id="quick-edit-cancel">Cancel</button>
       <button type="button" class="save-btn" id="quick-edit-save">Save</button>
@@ -46,7 +50,7 @@
 
   <div class="footer">
     <span id="sync-status"></span>
-    <span style="font-size:10px;color:#94a3b8;">v2.0.4</span>
+    <span style="font-size:10px;color:#94a3b8;">v2.1.0</span>
     <a href="#" id="btn-dashboard-link">Open Dashboard &rarr;</a>
   </div>
 

@@ -335,3 +335,25 @@ body {
   border-color: var(--blue);
   color: #fff;
 }
+
+.quick-edit-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+  margin-bottom: 8px;
+}
+
+.quick-edit-form .folder-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  margin-bottom: 8px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.quick-edit-form .folder-select:focus { border-color: var(--blue); }

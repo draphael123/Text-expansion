@@ -3,10 +3,12 @@ const searchEl = document.getElementById('search');
 const folderFilterEl = document.getElementById('folder-filter');
 const recentSection = document.getElementById('recent-section');
 const quickEditForm = document.getElementById('quick-edit-form');
+const quickEditFolderEl = document.getElementById('quick-edit-folder');
 let allMacros = [];
 let storedMacros = []; // All macros including disabled
 let currentFolder = '';
 let editingMacroId = null;
+let isAddMode = false;
 
 // Inline default macros — popup can seed these without background worker
 const POPUP_DEFAULT_MACROS = [
@@ -164,14 +166,37 @@ document.addEventListener('click', async (e) => {
   }
 });
 
-// Quick edit functions
+// Quick edit/add functions
+function populateFolderDropdown(selectedFolder = 'General') {
+  const folders = [...new Set(storedMacros.map(m => m.folder || 'General'))].sort();
+  if (!folders.includes('General')) folders.unshift('General');
+
+  quickEditFolderEl.innerHTML = folders.map(f =>
+    `<option value="${escapeHtml(f)}" ${f === selectedFolder ? 'selected' : ''}>${escapeHtml(f)}</option>`
+  ).join('') + '<option value="__new__">+ New Folder...</option>';
+}
+
+function openQuickAdd() {
+  isAddMode = true;
+  editingMacroId = null;
+  document.getElementById('quick-edit-title').textContent = 'New Macro';
+  document.getElementById('quick-edit-trigger').value = '';
+  document.getElementById('quick-edit-body').value = '';
+  populateFolderDropdown('General');
+  quickEditForm.classList.add('visible');
+  document.getElementById('quick-edit-trigger').focus();
+}
+
 function openQuickEdit(macroId) {
   const macro = storedMacros.find(m => m.id === macroId);
   if (!macro) return;
 
+  isAddMode = false;
   editingMacroId = macroId;
+  document.getElementById('quick-edit-title').textContent = 'Edit Macro';
   document.getElementById('quick-edit-trigger').value = macro.trigger;
   document.getElementById('quick-edit-body').value = macro.body;
+  populateFolderDropdown(macro.folder || 'General');
   quickEditForm.classList.add('visible');
   document.getElementById('quick-edit-trigger').focus();
 }
@@ -179,22 +204,47 @@ function openQuickEdit(macroId) {
 function closeQuickEdit() {
   quickEditForm.classList.remove('visible');
   editingMacroId = null;
+  isAddMode = false;
 }
 
 async function saveQuickEdit() {
-  if (!editingMacroId) return;
-
   const trigger = document.getElementById('quick-edit-trigger').value.trim().replace(/^;/, '');
   const body = document.getElementById('quick-edit-body').value;
+  let folder = quickEditFolderEl.value;
 
   if (!trigger || !body) return;
 
-  const macroIndex = storedMacros.findIndex(m => m.id === editingMacroId);
-  if (macroIndex === -1) return;
+  // Handle new folder creation
+  if (folder === '__new__') {
+    folder = prompt('Enter new folder name:');
+    if (!folder || !folder.trim()) return;
+    folder = folder.trim();
+  }
 
-  storedMacros[macroIndex].trigger = trigger;
-  storedMacros[macroIndex].body = body;
-  storedMacros[macroIndex].updatedAt = Date.now();
+  if (isAddMode) {
+    // Create new macro
+    const newMacro = {
+      id: 'macro-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      trigger,
+      body,
+      folder,
+      enabled: true,
+      useCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    storedMacros.push(newMacro);
+  } else {
+    // Edit existing macro
+    if (!editingMacroId) return;
+    const macroIndex = storedMacros.findIndex(m => m.id === editingMacroId);
+    if (macroIndex === -1) return;
+
+    storedMacros[macroIndex].trigger = trigger;
+    storedMacros[macroIndex].body = body;
+    storedMacros[macroIndex].folder = folder;
+    storedMacros[macroIndex].updatedAt = Date.now();
+  }
 
   try {
     await chrome.storage.local.set({ macros: storedMacros });
@@ -215,7 +265,7 @@ document.getElementById('btn-dashboard-link').addEventListener('click', (e) => {
   e.preventDefault(); chrome.runtime.openOptionsPage(); window.close();
 });
 document.getElementById('btn-add').addEventListener('click', () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html?add=true') }); window.close();
+  openQuickAdd();
 });
 
 loadMacros();
