@@ -11,7 +11,8 @@
     <h1><span class="logo">&#9889;</span> SnapText</h1>
     <div class="header-actions">
       <button class="icon-btn" id="btn-add" title="New macro">+</button>
-      <button class="icon-btn" id="btn-dashboard" title="Dashboard">&#9881;</button>
+      <button class="icon-btn" id="btn-settings" title="Settings">&#9881;</button>
+      <button class="icon-btn" id="btn-dashboard" title="Dashboard">&#8599;</button>
     </div>
   </div>
 
@@ -40,6 +41,65 @@
     </div>
   </div>
 
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settings-panel">
+    <div class="settings-header">
+      <span>Settings</span>
+      <button class="settings-close" id="settings-close">&times;</button>
+    </div>
+
+    <!-- Account Section -->
+    <div class="settings-section">
+      <div class="settings-label">Account</div>
+      <div id="settings-logged-out" class="settings-auth">
+        <p style="font-size:12px;color:#64748b;margin-bottom:8px;">Sign in to sync macros across devices</p>
+        <input type="email" id="settings-email" placeholder="Email" class="settings-input" />
+        <input type="password" id="settings-password" placeholder="Password" class="settings-input" />
+        <div id="settings-auth-error" class="settings-error"></div>
+        <div class="settings-auth-buttons">
+          <button id="settings-signin" class="settings-btn">Sign In</button>
+          <button id="settings-signup" class="settings-btn settings-btn-primary">Create Account</button>
+        </div>
+      </div>
+      <div id="settings-logged-in" class="settings-auth" style="display:none;">
+        <div class="settings-account-info">
+          <span class="settings-account-icon">&#128100;</span>
+          <span id="settings-account-email">user@example.com</span>
+        </div>
+        <button id="settings-signout" class="settings-btn settings-btn-danger">Sign Out</button>
+      </div>
+    </div>
+
+    <!-- Sync Section -->
+    <div class="settings-section">
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Cloud Sync</div>
+          <div class="settings-desc">Sync macros across devices</div>
+        </div>
+        <label class="settings-toggle">
+          <input type="checkbox" id="settings-sync-toggle" />
+          <span class="settings-toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Trigger Character -->
+    <div class="settings-section">
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Trigger Character</div>
+          <div class="settings-desc">Prefix for macro triggers</div>
+        </div>
+        <input type="text" id="settings-trigger-char" class="settings-trigger-input" value=";" maxlength="1" />
+      </div>
+    </div>
+
+    <div class="settings-footer">
+      <button id="settings-save" class="settings-btn settings-btn-primary" style="width:100%;">Save Settings</button>
+    </div>
+  </div>
+
   <div id="recent-section"></div>
   <div id="all-section"><div class="section-label">All Macros</div></div>
   <div class="macro-list" id="macro-list"></div>
@@ -50,7 +110,7 @@
 
   <div class="footer">
     <span id="sync-status"></span>
-    <span style="font-size:10px;color:#94a3b8;">v2.1.0</span>
+    <span style="font-size:10px;color:#94a3b8;">v2.2.0</span>
     <a href="#" id="btn-dashboard-link">Open Dashboard &rarr;</a>
   </div>
 

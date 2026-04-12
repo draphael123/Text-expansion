@@ -268,4 +268,161 @@ document.getElementById('btn-add').addEventListener('click', () => {
   openQuickAdd();
 });
 
+// ── Settings Panel ─────────────────────────────────────────────────────
+const settingsPanel = document.getElementById('settings-panel');
+const settingsLoggedOut = document.getElementById('settings-logged-out');
+const settingsLoggedIn = document.getElementById('settings-logged-in');
+
+function openSettings() {
+  settingsPanel.classList.add('visible');
+  loadSettingsState();
+}
+
+function closeSettings() {
+  settingsPanel.classList.remove('visible');
+}
+
+async function loadSettingsState() {
+  try {
+    const data = await chrome.storage.local.get(['session', 'settings']);
+    const session = data.session || null;
+    const settings = data.settings || { triggerChar: ';', syncEnabled: false };
+
+    // Update auth state
+    if (session?.idToken && session?.email) {
+      settingsLoggedOut.style.display = 'none';
+      settingsLoggedIn.style.display = 'block';
+      document.getElementById('settings-account-email').textContent = session.email;
+    } else {
+      settingsLoggedOut.style.display = 'block';
+      settingsLoggedIn.style.display = 'none';
+    }
+
+    // Update settings
+    document.getElementById('settings-sync-toggle').checked = settings.syncEnabled || false;
+    document.getElementById('settings-trigger-char').value = settings.triggerChar || ';';
+  } catch (e) {
+    console.error('[SnapText] Failed to load settings:', e);
+  }
+}
+
+async function settingsSignIn() {
+  const email = document.getElementById('settings-email').value.trim();
+  const password = document.getElementById('settings-password').value;
+  const errorEl = document.getElementById('settings-auth-error');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Please enter email and password.';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  errorEl.textContent = 'Signing in...';
+  errorEl.classList.add('visible');
+  errorEl.style.background = '#F1F5F9';
+  errorEl.style.color = '#64748B';
+
+  try {
+    const result = await chrome.runtime.sendMessage({ type: 'FIREBASE_SIGN_IN', email, password });
+    if (result.success) {
+      errorEl.classList.remove('visible');
+      document.getElementById('settings-email').value = '';
+      document.getElementById('settings-password').value = '';
+      loadSettingsState();
+      loadMacros(); // Refresh sync status
+    } else {
+      errorEl.textContent = result.error || 'Sign in failed.';
+      errorEl.style.background = '#FEE2E2';
+      errorEl.style.color = '#DC2626';
+    }
+  } catch (e) {
+    errorEl.textContent = 'Connection error. Please try again.';
+    errorEl.style.background = '#FEE2E2';
+    errorEl.style.color = '#DC2626';
+  }
+}
+
+async function settingsSignUp() {
+  const email = document.getElementById('settings-email').value.trim();
+  const password = document.getElementById('settings-password').value;
+  const errorEl = document.getElementById('settings-auth-error');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Please enter email and password.';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  if (password.length < 6) {
+    errorEl.textContent = 'Password must be at least 6 characters.';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  errorEl.textContent = 'Creating account...';
+  errorEl.classList.add('visible');
+  errorEl.style.background = '#F1F5F9';
+  errorEl.style.color = '#64748B';
+
+  try {
+    const result = await chrome.runtime.sendMessage({ type: 'FIREBASE_SIGN_UP', email, password });
+    if (result.success) {
+      errorEl.textContent = 'Account created! Check email to verify.';
+      errorEl.style.background = '#DCFCE7';
+      errorEl.style.color = '#166534';
+      document.getElementById('settings-email').value = '';
+      document.getElementById('settings-password').value = '';
+      loadSettingsState();
+      loadMacros();
+    } else {
+      errorEl.textContent = result.error || 'Sign up failed.';
+      errorEl.style.background = '#FEE2E2';
+      errorEl.style.color = '#DC2626';
+    }
+  } catch (e) {
+    errorEl.textContent = 'Connection error. Please try again.';
+    errorEl.style.background = '#FEE2E2';
+    errorEl.style.color = '#DC2626';
+  }
+}
+
+async function settingsSignOut() {
+  try {
+    await chrome.runtime.sendMessage({ type: 'FIREBASE_SIGN_OUT' });
+    loadSettingsState();
+    loadMacros();
+  } catch (e) {
+    console.error('[SnapText] Sign out failed:', e);
+  }
+}
+
+async function saveSettings() {
+  const syncEnabled = document.getElementById('settings-sync-toggle').checked;
+  const triggerChar = document.getElementById('settings-trigger-char').value || ';';
+
+  try {
+    const data = await chrome.storage.local.get(['settings']);
+    const settings = data.settings || {};
+    settings.syncEnabled = syncEnabled;
+    settings.triggerChar = triggerChar;
+    await chrome.storage.local.set({ settings });
+    closeSettings();
+  } catch (e) {
+    console.error('[SnapText] Failed to save settings:', e);
+  }
+}
+
+// Settings event listeners
+document.getElementById('btn-settings').addEventListener('click', openSettings);
+document.getElementById('settings-close').addEventListener('click', closeSettings);
+document.getElementById('settings-signin').addEventListener('click', settingsSignIn);
+document.getElementById('settings-signup').addEventListener('click', settingsSignUp);
+document.getElementById('settings-signout').addEventListener('click', settingsSignOut);
+document.getElementById('settings-save').addEventListener('click', saveSettings);
+
+// Enter key for settings auth
+document.getElementById('settings-password').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') settingsSignIn();
+});
+
 loadMacros();

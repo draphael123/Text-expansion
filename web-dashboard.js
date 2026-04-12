@@ -1257,19 +1257,33 @@ function checkWdAuth(session) {
   const navSignin = $('#nav-signin');
   const navDashboard = $('#nav-dashboard');
 
+  // Landing page auth section
+  const landingLoggedOut = $('#landing-logged-out');
+  const landingLoggedIn = $('#landing-logged-in');
+  const landingUserEmail = $('#landing-user-email');
+
   if (session?.idToken && session?.email) {
     if (loggedOut) loggedOut.style.display = 'none';
     if (loggedIn) loggedIn.style.display = 'block';
-    $('#wd-auth-user-email').textContent = session.email;
-    $('#wd-user-info').textContent = session.email;
+    if ($('#wd-auth-user-email')) $('#wd-auth-user-email').textContent = session.email;
+    if ($('#wd-user-info')) $('#wd-user-info').textContent = session.email;
     if (navSignin) navSignin.style.display = 'none';
     if (navDashboard) navDashboard.style.display = 'inline-flex';
+
+    // Update landing page auth section
+    if (landingLoggedOut) landingLoggedOut.style.display = 'none';
+    if (landingLoggedIn) landingLoggedIn.style.display = 'block';
+    if (landingUserEmail) landingUserEmail.textContent = session.email;
   } else {
     if (loggedOut) loggedOut.style.display = 'block';
     if (loggedIn) loggedIn.style.display = 'none';
     if ($('#wd-user-info')) $('#wd-user-info').textContent = 'Not signed in';
     if (navSignin) navSignin.style.display = 'inline-flex';
     if (navDashboard) navDashboard.style.display = 'none';
+
+    // Update landing page auth section
+    if (landingLoggedOut) landingLoggedOut.style.display = 'block';
+    if (landingLoggedIn) landingLoggedIn.style.display = 'none';
   }
 }
 
@@ -1394,6 +1408,106 @@ async function wdResetPassword(e) {
     resultEl.style.background = '#FEE2E2';
     resultEl.style.color = '#DC2626';
     resultEl.textContent = result.error;
+  }
+}
+
+// ── Landing Page Auth ──────────────────────────────────────────────────
+async function landingSignIn() {
+  const email = $('#landing-auth-email').value.trim();
+  const password = $('#landing-auth-password').value;
+  const errorEl = $('#landing-auth-error');
+
+  if (!email || !password) {
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Please enter both email and password.';
+    return;
+  }
+
+  errorEl.style.display = 'block';
+  errorEl.style.background = '#F1F5F9';
+  errorEl.style.color = '#64748B';
+  errorEl.textContent = 'Signing in...';
+
+  const result = await firebaseSignIn(email, password);
+  if (result.success) {
+    errorEl.style.display = 'none';
+    checkWdAuth(result.session);
+    // Clear inputs
+    $('#landing-auth-email').value = '';
+    $('#landing-auth-password').value = '';
+  } else {
+    errorEl.style.display = 'block';
+    errorEl.style.background = '#FEE2E2';
+    errorEl.style.color = '#DC2626';
+    errorEl.textContent = result.error;
+  }
+}
+
+async function landingSignUp() {
+  const email = $('#landing-auth-email').value.trim();
+  const password = $('#landing-auth-password').value;
+  const errorEl = $('#landing-auth-error');
+
+  if (!email || !password) {
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Please enter both email and password.';
+    return;
+  }
+
+  if (password.length < 6) {
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Password must be at least 6 characters.';
+    return;
+  }
+
+  errorEl.style.display = 'block';
+  errorEl.style.background = '#F1F5F9';
+  errorEl.style.color = '#64748B';
+  errorEl.textContent = 'Creating account...';
+
+  const result = await firebaseSignUp(email, password);
+  if (result.success) {
+    errorEl.style.display = 'block';
+    errorEl.style.background = '#DCFCE7';
+    errorEl.style.color = '#166534';
+    errorEl.textContent = 'Account created! Check your email to verify.';
+    checkWdAuth(result.session);
+    // Clear inputs
+    $('#landing-auth-email').value = '';
+    $('#landing-auth-password').value = '';
+  } else {
+    errorEl.style.display = 'block';
+    errorEl.style.background = '#FEE2E2';
+    errorEl.style.color = '#DC2626';
+    errorEl.textContent = result.error;
+  }
+}
+
+async function landingResetPassword(e) {
+  e.preventDefault();
+  const email = $('#landing-auth-email').value.trim();
+  const errorEl = $('#landing-auth-error');
+
+  if (!email) {
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Please enter your email address above.';
+    return;
+  }
+
+  errorEl.style.display = 'block';
+  errorEl.style.background = '#F1F5F9';
+  errorEl.style.color = '#64748B';
+  errorEl.textContent = 'Sending reset email...';
+
+  const result = await firebaseResetPassword(email);
+  if (result.success) {
+    errorEl.style.background = '#DCFCE7';
+    errorEl.style.color = '#166534';
+    errorEl.textContent = result.message;
+  } else {
+    errorEl.style.background = '#FEE2E2';
+    errorEl.style.color = '#DC2626';
+    errorEl.textContent = result.error;
   }
 }
 
@@ -1861,6 +1975,37 @@ function bindWebDashboardEvents() {
 
   const btnForgotPassword = $('#wd-btn-forgot-password');
   if (btnForgotPassword) btnForgotPassword.addEventListener('click', wdResetPassword);
+
+  // Auth (landing page)
+  const landingBtnSignin = $('#landing-btn-signin');
+  if (landingBtnSignin) landingBtnSignin.addEventListener('click', landingSignIn);
+
+  const landingBtnSignup = $('#landing-btn-signup');
+  if (landingBtnSignup) landingBtnSignup.addEventListener('click', landingSignUp);
+
+  const landingBtnSignout = $('#landing-btn-signout');
+  if (landingBtnSignout) landingBtnSignout.addEventListener('click', wdSignOut);
+
+  const landingBtnDashboard = $('#landing-btn-dashboard');
+  if (landingBtnDashboard) {
+    landingBtnDashboard.addEventListener('click', () => {
+      showDashboard();
+      renderAll();
+      populateWdShareFolders();
+      loadWdSettings();
+    });
+  }
+
+  const landingForgotPassword = $('#landing-forgot-password');
+  if (landingForgotPassword) landingForgotPassword.addEventListener('click', landingResetPassword);
+
+  // Enter key for landing auth
+  const landingAuthPassword = $('#landing-auth-password');
+  if (landingAuthPassword) {
+    landingAuthPassword.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') landingSignIn();
+    });
+  }
 
   // Settings
   const btnSaveSettings = $('#wd-btn-save-settings');
